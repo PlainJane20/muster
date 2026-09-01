@@ -11,7 +11,7 @@
 Hire agents. File tickets. Dispatch to real, live runtimes — not canned scripts.
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![2 Verified Runtimes](https://img.shields.io/badge/Runtimes-4_Verified_%2B_4_Documented-2a9d8f)]()
+[![6 Verified Runtimes](https://img.shields.io/badge/Runtimes-6_Verified_%2B_2_Documented-2a9d8f)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
 [![Status: Reference Implementation](https://img.shields.io/badge/status-reference%20implementation-6f42c1)](#whats-next)
 
@@ -44,6 +44,32 @@ Run `agent-hq onboard` and it walks you through all of this interactively — ch
 agent-hq is a git-native platform for running a small team of AI agents locally: hire an agent (one markdown file), file a ticket, dispatch it for real. It's a positioned, honest competitor to [Livery](https://github.com/sohailmamdani/livery) — same core idea (agents and tickets as plain files, no database) — built independently, with its own tradeoffs stated plainly rather than glossed over.
 
 **Explore:** [vs. Livery](#how-this-compares-to-livery) · [Verification](#what-verified-actually-means-here) · [How it works](#how-it-works) · [Architecture](#architecture) · [Setup](#setup) · [Usage](#usage)
+
+### Why this exists
+
+Most "AI agent platform" projects either (a) claim to support a long list of tools without anyone having actually run half of them, or (b) hide how thin that list really is behind a database and a UI. agent-hq does neither: every runtime here is labeled verified or documented based on whether it was actually installed and dispatched against for real — not asserted — and the whole thing is a handful of Python files and markdown, no server, no database, so you can read every line that decides what happens to your machine.
+
+### A real example, not a mockup
+
+This is an actual captured run — a real Aider dispatch, against a real local Ollama model, through the full pipeline below. It reported success. `agent-hq` caught that it wasn't true, live, without a human needing to notice:
+
+```
+$ agent-hq dispatch 0008 --run
+WARNING: aider-local is a medium-risk agent (tool_access=standard). Running anyway because run=True.
+Dispatched (attempt 0008-20260901T111628, pid 38990). Waiting for it to finish...
+Attempt 0008-20260901T111628: succeeded.
+
+Applied edit to README.md
+
+WARNING: the tool reported success, but no new commit or uncommitted change was found in the worktree.
+'succeeded' means the tool didn't error -- it doesn't prove the requested change actually happened.
+Check the worktree yourself before trusting this attempt.
+
+Worktree left in place for review: .agent-hq/worktrees/0008-1788286588
+Remove it with: agent-hq worktree remove 0008
+```
+
+That second warning is real code (`dispatch.py`'s `filesystem_verified` check), reacting to a real bug in Aider's own output, caught by comparing `git log`/`git status` in the worktree against what the tool claimed. See [Real findings](#real-findings-from-building-and-testing-this) for the two bugs found *while building that check itself*, and [ledger.md](ledger.md) (ticket 0008) for the closing summary written right after this exact run.
 
 ---
 
