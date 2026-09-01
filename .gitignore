@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.pytest_cache/
+.DS_Store
+*.egg-info/
+build/
+dist/
+
+# Ephemeral runtime state -- dispatch attempts and worktrees. Tickets,
+# agents, and memory are the durable history; this isn't.
+.agent-hq/

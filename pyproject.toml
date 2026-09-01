@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-hq"
+version = "0.1.0"
+description = "Hire AI agents, file tickets, dispatch to real live runtimes -- a git-native platform for running a small AI team."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "pydantic>=2.6.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+agent-hq = "agent_hq.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["agent_hq*"]

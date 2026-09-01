@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-labelledby="title description">
+  <title id="title">agent-hq</title>
+  <desc id="description">Hire AI agents, file tickets, dispatch to real live runtimes.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f1a24"/>
+      <stop offset="0.55" stop-color="#173247"/>
+      <stop offset="1" stop-color="#1f5673"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#5fc4e8" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#5fc4e8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#03080b" flood-opacity=".4"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="320" rx="24" fill="url(#bg)"/>
+  <circle cx="1040" cy="55" r="220" fill="url(#glow)"/>
+  <g opacity=".12" fill="none" stroke="#a9e2f2">
+    <path d="M750 40C880 140 940 40 1140 155"/>
+    <path d="M710 260C850 145 1010 280 1180 105"/>
+    <path d="M840 25C920 180 1070 135 1170 255"/>
+  </g>
+
+  <!-- HQ mark: a hub with three connected agents -->
+  <g transform="translate(74 68)" filter="url(#shadow)">
+    <rect width="88" height="88" rx="22" fill="#173247" stroke="#8fd4ee" stroke-opacity=".5"/>
+    <circle cx="44" cy="44" r="9" fill="#ffffff"/>
+    <circle cx="20" cy="20" r="6" fill="#5fc4e8"/>
+    <circle cx="68" cy="20" r="6" fill="#5fc4e8"/>
+    <circle cx="44" cy="70" r="6" fill="#5fc4e8"/>
+    <path d="M38 39L23 24M50 39L65 24M44 53V64" stroke="#5fc4e8" stroke-width="2.5" fill="none"/>
+  </g>
+
+  <text x="190" y="112" fill="#ffffff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="54" font-weight="750" letter-spacing="-1">agent-hq</text>
+  <text x="192" y="153" fill="#8fd4ee" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="2.8">A GIT-NATIVE AI TEAM YOU RUN LOCALLY</text>
+
+  <text x="75" y="225" fill="#dcf1f9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22">Hire agents. File tickets. Dispatch to real,</text>
+  <text x="75" y="258" fill="#dcf1f9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22">live runtimes -- not canned scripts.</text>
+
+  <g transform="translate(722 168)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">
+    <g transform="translate(0 0)"><rect width="120" height="42" rx="21" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".18"/><text x="60" y="26" text-anchor="middle" fill="#dcf1f9">2 verified</text></g>
+    <g transform="translate(130 0)"><rect width="136" height="42" rx="21" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".18"/><text x="68" y="26" text-anchor="middle" fill="#dcf1f9">3 documented</text></g>
+    <g transform="translate(276 0)"><rect width="112" height="42" rx="21" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".18"/><text x="56" y="26" text-anchor="middle" fill="#dcf1f9">beginner-safe</text></g>
+  </g>
+</svg>
