@@ -11,7 +11,7 @@
 Hire agents. File tickets. Dispatch to real, live runtimes — not canned scripts.
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![2 Verified Runtimes](https://img.shields.io/badge/Runtimes-2_Verified_%2B_3_Documented-2a9d8f)]()
+[![2 Verified Runtimes](https://img.shields.io/badge/Runtimes-2_Verified_%2B_6_Documented-2a9d8f)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
 [![Status: Reference Implementation](https://img.shields.io/badge/status-reference%20implementation-6f42c1)](#whats-next)
 
@@ -21,9 +21,9 @@ Hire agents. File tickets. Dispatch to real, live runtimes — not canned script
 
 <div align="center">
 
-| 5 registered agents | 5 runtimes | 24 tests | New to AI agents? |
+| 9 registered agents | 8 runtimes | 30 tests | New to AI agents? |
 |:---:|:---:|:---:|:---:|
-| One markdown file each | 2 verified live, 3 documented-only | Fully offline, real git worktree tests | Run `agent-hq onboard` |
+| One markdown file each | 2 verified live, 6 documented-only | Fully offline, real git worktree tests | Run `agent-hq onboard` |
 
 </div>
 
@@ -51,7 +51,7 @@ agent-hq is a git-native platform for running a small team of AI agents locally:
 
 | | Livery | agent-hq |
 |---|---|---|
-| **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | 5 registered, but **only 2 verified against a real run** (Claude Code, Codex) — the other 3 are documented-only, and say so |
+| **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | **8 registered** (those 5 plus Gemini CLI, Aider, OpenCode) — but **only 2 verified against a real run** (Claude Code, Codex). The other 6 are documented-only, and say so everywhere, not just in a footnote |
 | **Worktree isolation** | Yes, via `--worktree` | Yes — real `git worktree` commands, tested against a real repo |
 | **Agent assignment** | Manual (`assignee` field) | Manual (`assign` command) — same model, this isn't the routing-intelligence project (see [switchboard](https://github.com/PlainJane20/switchboard) for that) |
 | **Memory** | `memory/{decisions,lessons,preferences}` | Same shape — decisions, lessons, preferences, git-tracked markdown |
@@ -72,17 +72,21 @@ Every runtime falls into exactly one of two buckets, and it's disclosed in three
 | **Cursor** | 📄 Documented only | Built from Cursor's official CLI docs. cursor-agent isn't installed in this environment — nothing here has been run for real |
 | **Ollama** | 📄 Documented only | Built from Ollama's official API reference. No server was running in this environment |
 | **Gemini CLI** | 📄 Documented only | Built from Google's docs, which have real gaps (no documented working-directory or auto-approve flag) — this adapter only implements read-only access as a result, and says why |
+| **Aider** | 📄 Documented only | Built from Aider's scripting docs. `read_only` on this one is the least-verified setting in the whole registry — the docs don't confirm what happens to a proposed edit with nothing to answer its confirmation prompt |
+| **OpenCode** | 📄 Documented only | Built from OpenCode's CLI docs. `--format json` is documented as "raw events," not one clean object — this adapter's parser is a best-effort guess, and says so |
+| **LM Studio** | 📄 Documented only | Built from LM Studio's docs, which describe the endpoint as OpenAI-compatible — a safe assumption, still not independently re-confirmed against a real response |
 
-### Why the list stops at 5, when a lot more tools exist
+### Why the list stops at 8, when a lot more tools exist
 
 Terminal/CLI agents, AI-native IDEs, fully autonomous cloud agents, and no-code app builders are all real and popular — but most of them structurally aren't a "runtime adapter" in the sense this tool needs one:
 
-- **IDE extensions, not standalone tools** (Cursor's editor mode, Windsurf, Zed AI, Cline, Roo Code, Continue) — these live inside an editor; there's no CLI to spawn as a subprocess.
-- **Cloud-only, no local invocation surface** (Devin, Replit Agent, GitHub Copilot's autonomous agent, v0, Bolt.new, Lovable.dev) — web products, some with APIs that need accounts/keys this project doesn't have and can't verify.
-- **Models, not agent harnesses** (Kimi K3, GLM 5.2, and raw llama.cpp) — you'd reach these *through* something like Ollama's API, not as a runtime in their own right.
-- **Real CLIs, not yet implemented** (Aider, OpenCode, LM Studio's local server) — genuinely the same shape as what's here; contributions welcome, but nothing was built or verified for them in this version.
+- **IDE extensions, not standalone tools** (Cursor's editor mode, Windsurf, Zed AI, PearAI, Cline, Roo Code, Continue) — these live inside an editor; there's no CLI to spawn as a subprocess.
+- **Cloud-only, no local invocation surface** (Devin, Replit Agent, GitHub Copilot's autonomous agent, Augment Code, v0, Bolt.new, Lovable.dev) — web products, some with APIs that need accounts/keys this project doesn't have and can't verify.
+- **Models, not agent harnesses** (Kimi K3, GLM 5.2, and raw llama.cpp) — you'd reach these *through* something like Ollama's or LM Studio's API, not as a runtime in their own right.
+- **Terminal environments that host other harnesses, not a harness themselves** (Warp) — Warp's own value is wrapping other agents (including some already registered here); there's no distinct "Warp agent" CLI separate from the tools it hosts.
+- **No stable, documentable CLI to build against** (Devika) — an open-source Devin alternative, but without the kind of official, versioned CLI reference the other adapters here are built from; adding it now would mean guessing, which is exactly what every other adapter here was built specifically to avoid.
 
-Cursor CLI (`cursor-agent`, distinct from the editor) made the cut because it's a real, documentable non-interactive CLI — same category as Claude Code and Codex, just not installed here to verify live.
+Cursor CLI (`cursor-agent`, distinct from the editor), Aider, and OpenCode all made the cut because each is a real, documentable non-interactive CLI — same category as Claude Code and Codex, just not installed here to verify live.
 
 ---
 
@@ -111,7 +115,7 @@ flowchart TD
     Shared --> Runtime
     Runtime -->|claude_code| CC["claude -p<br/>(verified)"]
     Runtime -->|codex| CX["codex exec<br/>(verified)"]
-    Runtime -->|cursor_agent / gemini_cli / ollama| Doc["documented-only adapters"]
+    Runtime -->|"cursor_agent / gemini_cli / ollama /<br/>aider / opencode / lm_studio"| Doc["documented-only adapters (6)"]
     CC --> Attempt[("DispatchAttempt<br/>pid, status, result")]
     CX --> Attempt
     Doc --> Attempt
@@ -128,6 +132,7 @@ Full design rationale — including the exact commands run to verify Claude Code
 - **A "verified" adapter that only works under one auth configuration isn't actually verified.** Claude Code's `--bare` mode looked like the obvious default for scripted calls; it fails outright on a machine where managed settings pin OAuth login. The adapter omits it.
 - **Some official docs have real gaps.** Gemini CLI's headless-mode page doesn't document a working-directory flag or an auto-approval flag. Rather than guess, the adapter only implements `read_only` access and says exactly why in its own docstring.
 - **`--output-last-message <file>` beats parsing stdout.** A real `codex exec` run's stdout is full of banner and progress text ahead of the actual answer; the file argument gets written with just the final message.
+- **"Documented" isn't one confidence level -- some docs are gappier than others.** Aider's scripting docs don't say what happens to an edit with no way to confirm it; OpenCode's own docs describe its JSON output as "raw events" rather than a single object. Both adapters are built and tested, but their docstrings say exactly which specific behavior is a best-effort guess, rather than letting "documented" imply more confidence than the source material actually supports.
 
 Worktree isolation, proven the same way — not asserted. A real dispatch to a file-editing agent (`tool_access: standard`) created `worktree-proof.txt`, and afterward:
 
@@ -146,13 +151,13 @@ The file exists only in the isolated worktree. The main tree's only change is th
 
 ## What's next
 
-- [x] Two verified live runtimes (Claude Code, Codex), three documented (Cursor, Ollama, Gemini CLI)
+- [x] Two verified live runtimes (Claude Code, Codex), six documented (Cursor, Ollama, Gemini CLI, Aider, OpenCode, LM Studio)
 - [x] Real git worktree isolation, tested against a real repo
 - [x] Generalized memory (decisions, lessons, preferences)
 - [x] Beginner-friendly onboarding (`onboard`, `doctor`, interactive `agent-hire`)
 - [ ] Automatic routing — this tool assigns manually, on purpose; see [switchboard](https://github.com/PlainJane20/switchboard) for the automatic-routing version of this idea
 - [ ] Scheduling, Talk mode, Walkie-Talkie debate, Telegram-style notifications — all real ideas, not built in this version
-- [ ] Aider, OpenCode, LM Studio adapters — same shape as what's here, not yet implemented
+- [ ] Getting any documented-only adapter to "verified" — needs that tool actually installed and a real dispatch run against it; the code is ready, the proof isn't
 
 ## Setup
 
@@ -223,12 +228,15 @@ agent-hq/
 │   │   ├── codex.py          VERIFIED
 │   │   ├── cursor_agent.py   documented only
 │   │   ├── ollama.py         documented only
-│   │   └── gemini_cli.py     documented only, read_only-only
+│   │   ├── gemini_cli.py     documented only, read_only-only
+│   │   ├── aider.py          documented only, read_only is the least-verified setting here
+│   │   ├── opencode.py       documented only, best-effort JSON-events parser
+│   │   └── lm_studio.py      documented only, OpenAI-compatible response shape assumed
 │   └── cli.py                `agent-hq <command>`, including the onboard wizard
-├── agents/                   Five example agents, one per runtime
-├── tickets/                  Two real tickets, dispatched for real to prove it works
+├── agents/                   Nine example agents, one per runtime (two on claude_code)
+├── tickets/                  Three real tickets, dispatched for real to prove it works
 ├── memory/{decisions,lessons,preferences}/
-├── tests/                    24 tests -- real git for worktrees, mocked subprocess/HTTP for runtimes
+├── tests/                    30 tests -- real git for worktrees, mocked subprocess/HTTP for runtimes
 └── ARCHITECTURE.md           Design rationale, decision by decision
 ```
 

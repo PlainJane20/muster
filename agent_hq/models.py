@@ -15,7 +15,10 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-RuntimeKind = Literal["claude_code", "codex", "cursor_agent", "ollama", "gemini_cli"]
+RuntimeKind = Literal[
+    "claude_code", "codex", "cursor_agent", "ollama", "gemini_cli",
+    "aider", "opencode", "lm_studio",
+]
 VerificationTier = Literal["verified", "documented"]
 ToolAccess = Literal["read_only", "standard", "full"]
 RiskTier = Literal["low", "medium", "high"]
@@ -33,6 +36,9 @@ RUNTIME_VERIFICATION: dict = {
     "cursor_agent": "documented",
     "ollama": "documented",
     "gemini_cli": "documented",
+    "aider": "documented",
+    "opencode": "documented",
+    "lm_studio": "documented",
 }
 
 

@@ -21,7 +21,7 @@ from agent_hq import memory as memory_mod  # noqa: E402
 from agent_hq import registry, tickets  # noqa: E402
 from agent_hq import worktree as worktree_mod  # noqa: E402
 from agent_hq.models import Agent, RuntimeResult  # noqa: E402
-from agent_hq.runtimes import claude_code, codex, ollama  # noqa: E402
+from agent_hq.runtimes import aider, claude_code, codex, lm_studio, ollama, opencode  # noqa: E402
 
 AGENT_FIXTURE = """---
 id: test-agent
@@ -343,7 +343,80 @@ def test_dispatch_creates_worktree_for_git_backed_agent(git_repo, monkeypatch, t
 def test_doctor_check_all_reports_every_runtime():
     checks = doctor_mod.check_all()
     runtimes = {c.runtime for c in checks}
-    assert runtimes == {"claude_code", "codex", "cursor_agent", "gemini_cli", "ollama"}
+    assert runtimes == {
+        "claude_code", "codex", "cursor_agent", "gemini_cli", "ollama",
+        "aider", "opencode", "lm_studio",
+    }
+
+
+# --- aider / opencode / lm_studio (documented-tier) --------------------------
+
+def test_aider_uses_yes_flag_only_for_standard_and_full():
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = ("edited file.py", "")
+    fake_process.returncode = 0
+
+    with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
+        aider.run(prompt="fix the bug", tool_access="read_only")
+    assert "--yes" not in mock_popen.call_args[0][0]
+
+    with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
+        aider.run(prompt="fix the bug", tool_access="standard")
+    assert "--yes" in mock_popen.call_args[0][0]
+
+
+def test_opencode_parses_single_json_object():
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = ('{"text": "the answer"}', "")
+    fake_process.returncode = 0
+    with patch("subprocess.Popen", return_value=fake_process):
+        result = opencode.run(prompt="hi")
+    assert result.result_text == "the answer"
+
+
+def test_opencode_falls_back_to_ndjson_events():
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = ('{"text": "hello "}\n{"text": "world"}', "")
+    fake_process.returncode = 0
+    with patch("subprocess.Popen", return_value=fake_process):
+        result = opencode.run(prompt="hi")
+    assert result.result_text == "hello world"
+
+
+def test_opencode_falls_back_to_raw_stdout_on_unparseable_output():
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = ("not json at all", "")
+    fake_process.returncode = 0
+    with patch("subprocess.Popen", return_value=fake_process):
+        result = opencode.run(prompt="hi")
+    assert result.result_text == "not json at all"
+
+
+def test_lm_studio_parses_openai_compatible_response():
+    fake_response = MagicMock()
+    fake_response.read.return_value = b'{"choices": [{"message": {"content": "hello world"}}]}'
+    fake_response.__enter__ = lambda self: fake_response
+    fake_response.__exit__ = lambda *a: None
+
+    with patch("urllib.request.urlopen", return_value=fake_response):
+        result = lm_studio.run(prompt="hi")
+    assert result.result_text == "hello world"
+    assert result.pid is None
+
+
+def test_lm_studio_raises_clearly_on_unexpected_shape():
+    fake_response = MagicMock()
+    fake_response.read.return_value = b'{"unexpected": "shape"}'
+    fake_response.__enter__ = lambda self: fake_response
+    fake_response.__exit__ = lambda *a: None
+
+    with patch("urllib.request.urlopen", return_value=fake_response):
+        with pytest.raises(RuntimeError, match="unexpected LM Studio response shape"):
+            lm_studio.run(prompt="hi")
 
 
 if __name__ == "__main__":

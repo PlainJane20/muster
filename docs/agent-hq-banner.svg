@@ -41,7 +41,7 @@
 
   <g transform="translate(722 168)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">
     <g transform="translate(0 0)"><rect width="120" height="42" rx="21" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".18"/><text x="60" y="26" text-anchor="middle" fill="#dcf1f9">2 verified</text></g>
-    <g transform="translate(130 0)"><rect width="136" height="42" rx="21" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".18"/><text x="68" y="26" text-anchor="middle" fill="#dcf1f9">3 documented</text></g>
+    <g transform="translate(130 0)"><rect width="136" height="42" rx="21" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".18"/><text x="68" y="26" text-anchor="middle" fill="#dcf1f9">6 documented</text></g>
     <g transform="translate(276 0)"><rect width="112" height="42" rx="21" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".18"/><text x="56" y="26" text-anchor="middle" fill="#dcf1f9">beginner-safe</text></g>
   </g>
 </svg>

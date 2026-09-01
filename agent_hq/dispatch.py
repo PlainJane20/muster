@@ -18,7 +18,9 @@ from typing import Optional
 from agent_hq import attempts as attempts_mod
 from agent_hq import worktree as worktree_mod
 from agent_hq.models import Agent, DispatchAttempt, Ticket
-from agent_hq.runtimes import claude_code, codex, cursor_agent, gemini_cli, ollama
+from agent_hq.runtimes import (
+    aider, claude_code, codex, cursor_agent, gemini_cli, lm_studio, ollama, opencode,
+)
 
 _RUNTIME_MODULES = {
     "claude_code": claude_code,
@@ -26,6 +28,9 @@ _RUNTIME_MODULES = {
     "cursor_agent": cursor_agent,
     "ollama": ollama,
     "gemini_cli": gemini_cli,
+    "aider": aider,
+    "opencode": opencode,
+    "lm_studio": lm_studio,
 }
 
 

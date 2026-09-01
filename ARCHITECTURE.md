@@ -18,10 +18,10 @@ map perfectly onto three tiers. The benefit is that "how much can this
 agent actually do" is one honest question with one honest answer,
 independent of which tool answers it.
 
-## Why two runtimes are "verified" and three are "documented," and why that distinction is load-bearing
+## Why two runtimes are "verified" and six are "documented," and why that distinction is load-bearing
 
-It would have been easy to build five adapters from five sets of official
-docs and claim "5 runtimes" the same way Livery's README does. Instead:
+It would have been easy to build eight adapters from eight sets of
+official docs and claim "8 runtimes." Instead:
 
 - **claude_code** and **codex**: every flag was checked against that
   tool's own `--help` output on the actual installed CLI, and each was
@@ -30,23 +30,38 @@ docs and claim "5 runtimes" the same way Livery's README does. Instead:
   json` response, not assumed. `codex`'s `--output-last-message` pattern
   was chosen specifically because a real run showed stdout is full of
   banner text ahead of the actual answer.
-- **cursor_agent**, **ollama**, **gemini_cli**: none of these tools were
-  installed or running in the environment this was developed in. The code
-  is built from each one's official documentation, and each adapter's
-  docstring says exactly that, plus any specific gaps found in that
-  documentation (Gemini CLI's headless docs don't cover a working
-  directory flag or an auto-approval flag at all -- see below).
+- **cursor_agent**, **ollama**, **gemini_cli**, **aider**, **opencode**,
+  **lm_studio**: none of these tools were installed or running in the
+  environment this was developed in. Each is built from that tool's
+  official documentation, and each adapter's docstring says exactly that,
+  plus any specific gaps found in that documentation -- and the gaps
+  differ in kind, not just degree:
+  - Gemini CLI's docs don't cover a working-directory flag or an
+    auto-approval flag at all (see below).
+  - Aider's scripting docs don't say what happens to a proposed edit when
+    nothing can answer its confirmation prompt -- `read_only` here is a
+    guess at safe behavior, not a confirmed one.
+  - OpenCode's own docs describe `--format json` as "raw JSON events"
+    (plural), not a single response object -- the parser tries one JSON
+    object, then newline-delimited events, then falls back to raw stdout,
+    and that fallback chain is itself a guess at the real shape.
+  - LM Studio's docs describe the endpoint as OpenAI-compatible, which is
+    a safe assumption (it's about as stable a JSON shape as exists) but
+    still one step short of a confirmed real response.
 
-`Agent.verification` surfaces this distinction on every agent, in
-`agent-hq agent-list`, and in `agent-hq doctor`. The alternative -- one
-flat "supported runtimes" list -- would let a documented-but-never-run
-adapter look exactly as trustworthy as one that's actually been exercised.
-That's the same failure mode this whole portfolio has been built to avoid
-since the very first comparison to Livery: a "5 adapters" claim that
-sounds complete while being partly untested is worse than an honest "2
-verified, 3 not" claim that's actually true.
+`Agent.verification` surfaces the verified/documented split on every
+agent, in `agent-hq agent-list`, and in `agent-hq doctor` -- but within
+"documented," the *specific* gap for each adapter lives in that adapter's
+own docstring, not flattened into one generic disclaimer. The alternative
+-- one flat "supported runtimes" list -- would let a documented-but-never-
+run adapter look exactly as trustworthy as one that's actually been
+exercised, and would hide that some documented adapters are gappier than
+others. That's the same failure mode this whole portfolio has been built
+to avoid since the very first comparison to Livery: a "5 adapters" claim
+that sounds complete while being partly untested is worse than an honest
+"2 verified, 6 not, and here's specifically why" claim that's actually true.
 
-## Why Gemini CLI only implements `read_only`
+## Why Gemini CLI only implements `read_only`, and Aider's `read_only` is the least trustworthy setting in the registry
 
 Google's headless-mode docs (fetched during development) document exit
 codes precisely (0/1/42/53) but say nothing about a working-directory flag
@@ -58,6 +73,17 @@ can answer. `gemini_cli.run()` raises `NotImplementedError` for anything
 but `read_only`, with the reason stated in the exception message itself --
 a documentation gap became a real, enforced constraint in the code,
 instead of a footnote nobody reads before the first hung dispatch.
+
+Aider's situation is the opposite kind of gap, and arguably worse:
+`read_only` here means "run without `--yes`," but Aider's own scripting
+docs never say what actually happens to a proposed edit when there's no
+terminal to answer its confirmation prompt in a non-interactive context.
+Unlike Gemini CLI, there was no clean way to turn this into a hard
+`NotImplementedError` -- the uncertainty is inherent to the tool's
+documented behavior, not a missing flag this code can refuse to guess at.
+This is named explicitly, here and in the adapter's own docstring, rather
+than left for `tool_access: read_only` to imply a safety guarantee the
+documentation doesn't actually back up.
 
 ## Why worktrees are created before the run and left in place after
 

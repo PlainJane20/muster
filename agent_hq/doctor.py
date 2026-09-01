@@ -25,9 +25,9 @@ def _check_cli(binary: str) -> tuple:
     return (True, f"found at {path}") if path else (False, f"{binary!r} not found on PATH")
 
 
-def _check_ollama_server(base_url: str = "http://localhost:11434") -> tuple:
+def _check_http_server(base_url: str, ping_path: str) -> tuple:
     try:
-        urllib.request.urlopen(f"{base_url}/api/tags", timeout=2)
+        urllib.request.urlopen(f"{base_url}{ping_path}", timeout=2)
         return True, f"server responding at {base_url}"
     except Exception as e:
         return False, f"no server responding at {base_url} ({e.__class__.__name__})"
@@ -39,12 +39,18 @@ def check_all() -> list:
     for runtime, binary in (
         ("claude_code", "claude"), ("codex", "codex"),
         ("cursor_agent", "cursor-agent"), ("gemini_cli", "gemini"),
+        ("aider", "aider"), ("opencode", "opencode"),
     ):
         available, detail = _check_cli(binary)
         checks.append(RuntimeStatus(runtime, available, detail, RUNTIME_VERIFICATION[runtime]))
 
-    available, detail = _check_ollama_server()
+    available, detail = _check_http_server("http://localhost:11434", "/api/tags")
     checks.append(RuntimeStatus("ollama", available, detail, RUNTIME_VERIFICATION["ollama"]))
+
+    # LM Studio's OpenAI-compatible server exposes /v1/models for listing
+    # loaded models -- the standard OpenAI-compatible ping endpoint.
+    available, detail = _check_http_server("http://localhost:1234", "/v1/models")
+    checks.append(RuntimeStatus("lm_studio", available, detail, RUNTIME_VERIFICATION["lm_studio"]))
 
     return checks
 
