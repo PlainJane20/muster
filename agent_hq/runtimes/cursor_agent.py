@@ -1,16 +1,39 @@
-"""DOCUMENTED, NOT VERIFIED: cursor-agent (Cursor's CLI).
+"""DOCUMENTED, PARTIALLY VERIFIED: cursor-agent (Cursor's CLI).
 
-cursor-agent isn't installed in the environment this was developed in, so
-nothing in this file has been run for real -- everything here comes from
-https://cursor.com/docs/cli/reference/parameters (fetched during
-development). If you have cursor-agent installed, the flags below should
-be correct, but treat the first real run as the actual verification this
-adapter hasn't had yet.
+Installed for real (`curl https://cursor.com/install -fsS | bash`, version
+2026.08.31-4057e58) and its flags checked against the real `--help` output,
+not just the docs page this adapter was originally built from -- but never
+completed an authenticated dispatch (cursor-agent has no free tier; it
+requires `agent login` or a `CURSOR_API_KEY`, neither available in this
+environment), so the *success* response shape below is still the original
+documented assumption, not a confirmed one.
 
-Known documentation gap: exit code and failure-output shape aren't
-specified on the reference page. `run()` below treats any non-zero exit
-as a RuntimeError with whatever stderr it gets -- reasonable, but
-untested against a real failure.
+Two things confirmed real, not guessed:
+
+1. **Every flag this adapter uses is real.** `--print`, `--output-format
+   json`, `--trust`, `--workspace`, `--force`, `--model` all appear
+   verbatim in the real `--help` output. Unlike gemini_cli, the original
+   docs page this was built from turned out to be accurate -- a useful
+   negative result: not every "documented, not verified" adapter is
+   hiding a gap.
+2. **The real, unauthenticated failure mode is a plain non-zero exit with
+   a plain-text stderr message** (`Error: Authentication required. Please
+   run 'agent login' first, or set CURSOR_API_KEY environment variable.`),
+   not a JSON error body the way gemini_cli's is. The generic
+   any-non-zero-exit-is-a-RuntimeError handling below already covers this
+   correctly without needing a special case -- confirmed by triggering it
+   live, not assumed.
+
+Still unconfirmed: the exact shape of a *successful* JSON response
+(`result` vs `response` vs something else), since no authenticated run
+was possible here. `run()` below tries both known field names and falls
+back to raw stdout, same defensive shape as before this was ever run.
+
+`full` is intentionally NOT mapped to `--yolo` (confirmed live to be a
+real, working alias for `--force`) -- using the explicit `--force` name
+throughout keeps this file's intent readable without relying on Cursor's
+more casually-named alias, the same reasoning as aider.py using
+`--yes-always` instead of the shorter `--yes`.
 """
 
 from __future__ import annotations

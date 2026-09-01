@@ -1,21 +1,46 @@
-"""DOCUMENTED, NOT VERIFIED: Gemini CLI (Google).
+"""DOCUMENTED, PARTIALLY VERIFIED: Gemini CLI (Google).
 
-Not installed in the environment this was developed in. Built from
-https://www.geminicli.com/docs/cli/headless (fetched during development),
-which itself has real gaps -- worth knowing before trusting this adapter
-more than the code below actually earns:
+Installed for real (`npm install -g @google/gemini-cli`, v0.57.0) and its
+real CLI behavior checked against `--help` and actual invocations -- but
+never completed an authenticated dispatch (no Google account/API key
+available in this environment), so the *success* response shape below is
+still the original documented assumption, not a confirmed one. Everything
+else in this docstring is checked, not guessed.
 
-- No documented flag for setting a working directory. This adapter falls
-  back to the subprocess `cwd`, matching Claude Code's documented
-  behavior, but Gemini CLI's own docs don't confirm that's correct for it.
-- No documented auto-approval/"yolo" flag for unattended tool use. Because
-  of that gap, this adapter only implements `read_only` (plain generation,
-  no tool calls to approve) -- `standard`/`full` raise NotImplementedError
-  rather than silently sending a flag that might not exist and might hang
-  waiting for an approval prompt nothing here can answer.
+Three real corrections to the original documented-only version of this
+adapter, found only by actually installing and running it:
 
-Exit codes ARE documented (0 success, 1 general error, 42 input error,
-53 turn limit exceeded) and are used as-is below.
+1. **A working-directory flag and an auto-approval flag both exist.** The
+   original version of this adapter, built from a web-fetched summary of
+   Gemini CLI's docs, claimed neither was documented and refused
+   `standard`/`full` tool_access as a result. The real `--help` shows
+   `--approval-mode {default,auto_edit,yolo,plan}` (an auto-approval
+   mechanism) and `--include-directories` (adds directories to the
+   workspace, the same "doesn't change primary cwd" shape as Claude
+   Code's `--add-dir`). The secondary source that produced the original
+   docstring was itself incomplete -- a reminder that "documented" is
+   only as good as the documentation actually consulted.
+2. **`--approval-mode` silently downgrades to `default` in an untrusted
+   directory.** Running `--approval-mode auto_edit` in a fresh directory
+   printed "Approval mode overridden to 'default' because the current
+   folder is not trusted" and proceeded as if no approval mode had been
+   set at all -- exactly the kind of silent-fallback failure mode this
+   whole registry has been built to catch. `--skip-trust` must be passed
+   alongside any non-default approval mode, or the flag does nothing.
+3. **The exit code IS the JSON error's `code` field, not a fixed small
+   enum.** A real unauthenticated run returned exit code 41 with a JSON
+   body `{"error": {"code": 41, ...}}` -- confirming the two travel
+   together, but also disproving the original documented exit-code table
+   (0/1/42/53) as exhaustive. This adapter parses the JSON body for the
+   real error message on any non-zero exit rather than trusting a fixed
+   code-to-meaning lookup.
+
+`full` maps to `--approval-mode yolo` (Google's own name for
+"auto-approve everything") rather than a safer default, on the same basis
+`full` means broad capability elsewhere in this registry (Codex's
+`danger-full-access` sandbox, Claude Code's full tool allowlist) -- a
+scoped capability grant, not a request to disable every safety check
+categorically the way `--dangerously-skip-permissions` would.
 """
 
 from __future__ import annotations
@@ -26,10 +51,10 @@ from typing import Optional
 
 from agent_hq.models import RuntimeResult, ToolAccess
 
-_EXIT_CODE_MEANINGS = {
-    1: "general error or API failure",
-    42: "invalid prompt or arguments",
-    53: "turn limit exceeded",
+_TOOL_ACCESS_TO_APPROVAL_MODE = {
+    "read_only": None,
+    "standard": "auto_edit",
+    "full": "yolo",
 }
 
 
@@ -42,15 +67,11 @@ def run(
     timeout: int = 600,
     pid_callback=None,
 ) -> RuntimeResult:
-    if tool_access != "read_only":
-        raise NotImplementedError(
-            "gemini_cli only implements tool_access='read_only' -- no "
-            "documented auto-approval flag exists for unattended "
-            "standard/full runs. See this module's docstring."
-        )
-
     full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
     cmd = ["gemini", "-p", full_prompt, "--output-format", "json"]
+    approval_mode = _TOOL_ACCESS_TO_APPROVAL_MODE[tool_access]
+    if approval_mode:
+        cmd += ["--approval-mode", approval_mode, "--skip-trust"]
     if model:
         cmd += ["--model", model]
 
@@ -68,13 +89,19 @@ def run(
         stdout, stderr = process.communicate()
         raise TimeoutError(f"gemini exceeded {timeout}s. stderr: {stderr[:500]}")
 
-    if process.returncode != 0:
-        meaning = _EXIT_CODE_MEANINGS.get(process.returncode, "undocumented exit code")
-        raise RuntimeError(f"gemini exited {process.returncode} ({meaning}). stderr: {stderr[:1000] or '(empty)'}")
+    try:
+        data = json.loads(stdout.strip())
+    except json.JSONDecodeError:
+        if process.returncode != 0:
+            raise RuntimeError(f"gemini exited {process.returncode}. stderr: {stderr[:1000] or '(empty)'}")
+        raise ValueError(f"could not parse gemini output as JSON. Raw stdout:\n{stdout[:500]}")
 
-    data = json.loads(stdout.strip())
+    if "error" in data:
+        error = data["error"]
+        raise RuntimeError(f"gemini reported an error (code {error.get('code')}): {error.get('message')}")
+
     return RuntimeResult(
-        is_error="error" in data,
+        is_error=False,
         result_text=data.get("response", ""),
         returncode=process.returncode,
         pid=process.pid,

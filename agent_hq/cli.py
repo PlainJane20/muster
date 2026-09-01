@@ -97,13 +97,19 @@ def _interactive_hire() -> None:
     agent_id = input("Short id for this agent (e.g. 'my-claude-agent'): ").strip()
     name = input(f"Display name [{agent_id}]: ").strip() or agent_id
     print("\nWhich tool should this agent use?")
-    print("  1) claude_code  -- Claude Code (verified adapter)")
-    print("  2) codex        -- OpenAI Codex (verified adapter)")
-    print("  3) cursor_agent -- Cursor (documented, not verified here)")
-    print("  4) gemini_cli   -- Gemini CLI (documented, read-only only)")
-    print("  5) ollama       -- a local Ollama model (documented)")
-    choice = input("Pick 1-5 [1]: ").strip() or "1"
-    runtime = {"1": "claude_code", "2": "codex", "3": "cursor_agent", "4": "gemini_cli", "5": "ollama"}.get(choice, "claude_code")
+    print("  1) claude_code  -- Claude Code (verified)")
+    print("  2) codex        -- OpenAI Codex (verified)")
+    print("  3) ollama       -- a local Ollama model (verified)")
+    print("  4) aider        -- Aider, terminal pair programmer (verified)")
+    print("  5) opencode     -- OpenCode, model-agnostic CLI (verified)")
+    print("  6) cursor_agent -- Cursor CLI (documented, flags confirmed live)")
+    print("  7) gemini_cli   -- Gemini CLI (documented, flags confirmed live)")
+    print("  8) lm_studio    -- LM Studio local server (documented, needs a GUI session to verify)")
+    choice = input("Pick 1-8 [1]: ").strip() or "1"
+    runtime = {
+        "1": "claude_code", "2": "codex", "3": "ollama", "4": "aider",
+        "5": "opencode", "6": "cursor_agent", "7": "gemini_cli", "8": "lm_studio",
+    }.get(choice, "claude_code")
     purpose = input("In plain English, what should this agent be used for? ").strip()
     tags_raw = input("A few keywords to describe it, comma-separated: ").strip()
     tags = [t.strip() for t in tags_raw.split(",") if t.strip()]

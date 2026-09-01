@@ -21,9 +21,9 @@ Hire agents. File tickets. Dispatch to real, live runtimes — not canned script
 
 <div align="center">
 
-| 10 registered agents | 8 runtimes | 32 tests | New to AI agents? |
+| 10 registered agents | 8 runtimes | 37 tests | New to AI agents? |
 |:---:|:---:|:---:|:---:|
-| One markdown file each | 4 verified live, 4 documented-only | Fully offline, real git worktree tests | Run `agent-hq onboard` |
+| One markdown file each | 5 verified live, 3 documented (flags/errors confirmed live) | Fully offline, real git worktree tests | Run `agent-hq onboard` |
 
 </div>
 
@@ -51,7 +51,7 @@ agent-hq is a git-native platform for running a small team of AI agents locally:
 
 | | Livery | agent-hq |
 |---|---|---|
-| **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | **8 registered** (those 5 plus Gemini CLI, Aider, OpenCode) — **4 verified against real runs** (Claude Code, Codex, Ollama, Aider — the last two installed and tested live after the first pass shipped as "documented"). The other 4 are documented-only, and say so everywhere, not just in a footnote |
+| **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | **8 registered** (those 5 plus Gemini CLI, Aider, OpenCode) — **5 verified against real runs** (Claude Code, Codex, Ollama, Aider, OpenCode — the last three installed and tested live after the first pass shipped as "documented"). The other 3 (Cursor, Gemini CLI, LM Studio) had real install/CLI attempts too — each blocked from a full dispatch by something concrete and disclosed (missing credentials for the first two, no GUI session for the third), not left untested by choice |
 | **Worktree isolation** | Yes, via `--worktree` | Yes — real `git worktree` commands, tested against a real repo |
 | **Agent assignment** | Manual (`assignee` field) | Manual (`assign` command) — same model, this isn't the routing-intelligence project (see [switchboard](https://github.com/PlainJane20/switchboard) for that) |
 | **Memory** | `memory/{decisions,lessons,preferences}` | Same shape — decisions, lessons, preferences, git-tracked markdown |
@@ -71,10 +71,10 @@ Every runtime falls into exactly one of two buckets, and it's disclosed in three
 | **Codex** | ✅ Verified | Flags checked against `codex exec --help`; proven with a real invocation (`-s read-only -o <file>`, exit 0, correct output) |
 | **Ollama** | ✅ Verified | Installed via Homebrew, pulled a real model, called the actual running server through this exact adapter — real response returned |
 | **Aider** | ✅ Verified, with a real caveat found | Installed via pip, pointed at the local Ollama server — but a live edit dispatch revealed that "Applied edit" + exit 0 does **not** guarantee a persisted change (see [Real findings](#real-findings-from-building-and-testing-this)) |
-| **Cursor** | 📄 Documented only | Built from Cursor's official CLI docs. cursor-agent isn't installed in this environment — nothing here has been run for real |
-| **Gemini CLI** | 📄 Documented only | Built from Google's docs, which have real gaps (no documented working-directory or auto-approve flag) — this adapter only implements read-only access as a result, and says why |
-| **OpenCode** | 📄 Documented only | Built from OpenCode's CLI docs. `--format json` is documented as "raw events," not one clean object — this adapter's parser is a best-effort guess, and says so |
-| **LM Studio** | 📄 Documented only | Built from LM Studio's docs, which describe the endpoint as OpenAI-compatible — a safe assumption, still not independently re-confirmed against a real response |
+| **OpenCode** | ✅ Verified | Installed via npm, pointed at the local Ollama server — but only after finding its `--format json` parser was guessing the wrong field; fixed against a real captured response before shipping |
+| **Cursor** | 📄 Documented, flags confirmed live | Installed for real (the official install script) and every flag checked against the real `--help` — all correct on the first try. Blocked from a full dispatch only by the one thing that can't be worked around here: no free tier, and no `CURSOR_API_KEY` in this environment |
+| **Gemini CLI** | 📄 Documented, corrected live | The *original* docstring was itself wrong — built from a secondary summary that missed real flags (`--approval-mode`, `--include-directories`). Installing the real CLI surfaced and fixed that, plus a silent gotcha: `--approval-mode` quietly reverts to `default` in an untrusted directory unless `--skip-trust` is also passed. Blocked from a full dispatch only by missing `GEMINI_API_KEY`/Google auth |
+| **LM Studio** | 📄 Documented only, real structural blocker found | `brew install --cask lm-studio` genuinely installed it (v0.4.23) — but it's a GUI-first Electron app, and this environment has no window-server session for it to attach to. Launching it falls through to its embedded Node runtime's own `--help` instead of starting the app, so its CLI/server never bootstraps. Unlike Cursor/Gemini, this isn't a missing-credential gap — it needs an actual desktop session, not just more installing |
 
 ### Why the list stops at 8, when a lot more tools exist
 
@@ -86,7 +86,7 @@ Terminal/CLI agents, AI-native IDEs, fully autonomous cloud agents, and no-code 
 - **Terminal environments that host other harnesses, not a harness themselves** (Warp) — Warp's own value is wrapping other agents (including some already registered here); there's no distinct "Warp agent" CLI separate from the tools it hosts.
 - **No stable, documentable CLI to build against** (Devika) — an open-source Devin alternative, but without the kind of official, versioned CLI reference the other adapters here are built from; adding it now would mean guessing, which is exactly what every other adapter here was built specifically to avoid.
 
-Cursor CLI (`cursor-agent`, distinct from the editor), Aider, and OpenCode all made the cut because each is a real, documentable non-interactive CLI — same category as Claude Code and Codex, just not installed here to verify live.
+Cursor CLI (`cursor-agent`, distinct from the editor), Aider, and OpenCode all made the cut because each is a real, documentable non-interactive CLI — same category as Claude Code and Codex. Aider and OpenCode are now fully verified live; Cursor's flags are confirmed live too, just short of an authenticated dispatch (see the table above for exactly what's still missing and why).
 
 ---
 
@@ -113,8 +113,8 @@ flowchart TD
     WorktreeCheck -->|no| Shared["Run in shared cwd"]
     Worktree --> Runtime{"Which runtime?"}
     Shared --> Runtime
-    Runtime -->|"claude_code / codex /<br/>ollama / aider"| CC["Verified runtimes (4)"]
-    Runtime -->|"cursor_agent / gemini_cli /<br/>opencode / lm_studio"| Doc["Documented-only adapters (4)"]
+    Runtime -->|"claude_code / codex /<br/>ollama / aider / opencode"| CC["Verified runtimes (5)"]
+    Runtime -->|"cursor_agent / gemini_cli /<br/>lm_studio"| Doc["Documented adapters (3)<br/>flags/errors confirmed live where possible"]
     CC --> Attempt[("DispatchAttempt<br/>pid, status, result")]
     Doc --> Attempt
     Attempt --> Ledger["close --summary<br/>-> ledger.md"]
@@ -135,6 +135,11 @@ Full design rationale — including the exact commands run to verify Claude Code
 - **A flag that isn't in `--help`'s summary can still be real.** `--yes` looked like a wrong flag name (only `--yes-always` appears in Aider's `--help`). A live test with `--yes` proved it actually works — argparse's default prefix-matching resolves it to `--yes-always` unambiguously. Reported here as a correction to an earlier internal finding, not hidden: "looked like a bug, tested it, wasn't one" is exactly the kind of result this whole verification exercise exists to produce, not just bug reports.
 - **A real bug did turn up in the same round of testing.** Aider's repo-map feature caused an 8+ minute hang with zero output against a small local model inside a real git repo — confirmed by watching the process stay alive (barely any CPU used) while a parallel direct call to the same model also stalled. `--map-tokens 0` disables just that feature and fixed it completely, confirmed with a clean rerun.
 - **The sharpest finding: a tool can report success without the change actually happening.** A live edit dispatch through the *full* pipeline (ticket → worktree → Aider → local model) printed "Applied edit to README.md" and exited 0 — but `git log` in that worktree afterward showed no new commit. The small model's malformed response apparently couldn't be cleanly reconciled into a real file change, and aider reported success anyway. A `DispatchAttempt` with `status: succeeded` means "the tool didn't error," not "the requested change provably happened" — verifying the latter means checking the worktree yourself.
+- **A registered model name isn't the same as a reachable model.** OpenCode's `--model ollama/llama3.2:1b` failed with `ProviderModelNotFoundError: Did you mean: ollama-cloud?` — its built-in "ollama" is a cloud offering, not a pointer to a local server. Reaching the real local Ollama instance needed a custom provider block in `~/.config/opencode/opencode.jsonc`, config this adapter can't set up on a user's behalf, so it's documented instead of silently assumed away.
+- **An untested best-effort parser guessed the wrong field, and the fallback chain caught it.** OpenCode's docs describe its JSON output as "raw events" with no example. An initial guess assumed a top-level `text` key; a real captured run showed the actual text lives at `event["part"]["text"]`. The bug never surfaced as a crash — it silently fell through to the raw-stdout fallback — which is exactly the failure mode a fallback chain exists to catch quietly, but also exactly why it needed to be checked against real output before shipping, not trusted just because it didn't error.
+- **Even "documented" claims can be wrong if the documentation itself was second-hand.** Gemini CLI's original adapter was built from a *summary* of Google's docs, not the primary source — that summary missed real flags (`--approval-mode`, `--include-directories`) and led the original adapter to wrongly claim neither existed. Installing the real CLI and reading its actual `--help` output caught this. Lesson: "documented" is only as trustworthy as the documentation actually consulted.
+- **A flag can exist, be spelled correctly, and still silently do nothing.** Gemini CLI's `--approval-mode auto_edit` in an untrusted directory printed a warning and quietly reverted to `default` — same class of bug as a flag being ignored outright, just harder to notice because the command still exits 0. `--skip-trust` must be passed alongside it, confirmed by triggering the silent downgrade directly, not inferred from docs.
+- **A GUI-only tool is a different kind of "can't verify" than a missing API key.** LM Studio really did install via `brew install --cask lm-studio` — but this environment has no window-server session, so the app can never complete first-run setup; attempting to launch it falls through to its embedded Electron/Node runtime's own bare `--help` output instead of starting anything. Cursor and Gemini CLI are one credential away from a full dispatch; LM Studio needs an actual desktop session, and no amount of further installing changes that here.
 
 Worktree isolation, proven the same way — not asserted. A real dispatch to a file-editing agent (`tool_access: standard`) created `worktree-proof.txt`, and afterward:
 
@@ -153,14 +158,15 @@ The file exists only in the isolated worktree. The main tree's only change is th
 
 ## What's next
 
-- [x] Four verified live runtimes (Claude Code, Codex, Ollama, Aider), four documented (Cursor, Gemini CLI, OpenCode, LM Studio)
+- [x] Five verified live runtimes (Claude Code, Codex, Ollama, Aider, OpenCode); three documented with real install/CLI attempts (Cursor, Gemini CLI, LM Studio)
 - [x] Real git worktree isolation, tested against a real repo, including a real (imperfect) file-editing dispatch through the full pipeline
 - [x] Generalized memory (decisions, lessons, preferences)
 - [x] Beginner-friendly onboarding (`onboard`, `doctor`, interactive `agent-hire`)
 - [ ] Verifying dispatch success against the actual filesystem state, not just exit code + stdout — Aider's live test showed these can disagree; nothing in `dispatch()` cross-checks this yet
 - [ ] Automatic routing — this tool assigns manually, on purpose; see [switchboard](https://github.com/PlainJane20/switchboard) for the automatic-routing version of this idea
 - [ ] Scheduling, Talk mode, Walkie-Talkie debate, Telegram-style notifications — all real ideas, not built in this version
-- [ ] Getting Cursor, Gemini CLI, OpenCode, or LM Studio to "verified" — needs that tool actually installed (or, for Cursor/Gemini, an account) and a real dispatch run against it
+- [ ] Getting Cursor or Gemini CLI to fully "verified" — every flag and error shape is now confirmed live; the only remaining gap is an authenticated success response, which needs a `CURSOR_API_KEY`/Cursor account or a `GEMINI_API_KEY`/Google auth this environment doesn't have
+- [ ] Getting LM Studio to "verified" at all — needs a machine with a real interactive desktop session, not just another install attempt
 
 ## Setup
 
@@ -231,10 +237,10 @@ agent-hq/
 │   │   ├── codex.py          VERIFIED
 │   │   ├── ollama.py         VERIFIED (installed + tested live after shipping as documented)
 │   │   ├── aider.py          VERIFIED, with a real caveat -- "succeeded" doesn't guarantee a persisted change
-│   │   ├── cursor_agent.py   documented only
-│   │   ├── gemini_cli.py     documented only, read_only-only
-│   │   ├── opencode.py       documented only, best-effort JSON-events parser
-│   │   └── lm_studio.py      documented only, OpenAI-compatible response shape assumed
+│   │   ├── opencode.py       VERIFIED (installed + tested live; fixed a real parser bug first)
+│   │   ├── cursor_agent.py   documented -- flags/error shape confirmed live, blocked by missing API key
+│   │   ├── gemini_cli.py     documented -- flags/error shape confirmed live, blocked by missing API key
+│   │   └── lm_studio.py      documented -- real install attempted, blocked by no GUI session in this environment
 │   └── cli.py                `agent-hq <command>`, including the onboard wizard
 ├── agents/                   Ten example agents across 8 runtimes (two each on claude_code and aider)
 ├── tickets/                  Five real tickets, dispatched for real to prove it works

@@ -35,9 +35,9 @@ RUNTIME_VERIFICATION: dict = {
     "codex": "verified",
     "ollama": "verified",
     "aider": "verified",
+    "opencode": "verified",
     "cursor_agent": "documented",
     "gemini_cli": "documented",
-    "opencode": "documented",
     "lm_studio": "documented",
 }
 

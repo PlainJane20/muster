@@ -18,41 +18,49 @@ map perfectly onto three tiers. The benefit is that "how much can this
 agent actually do" is one honest question with one honest answer,
 independent of which tool answers it.
 
-## Why four runtimes are "verified" and four are "documented," and why that distinction is load-bearing
+## Why five runtimes are "verified" and three are "documented," and why that distinction is load-bearing
 
 It would have been easy to build eight adapters from eight sets of
 official docs and claim "8 runtimes." Instead, verification started at
 two (claude_code, codex -- both installed in the original development
-environment) and grew to four by actually installing two more
-(ollama, aider) and running real dispatches against them, rather than
-leaving "documented" as a permanent label for a tool that was simply
-never tried. See the next section for exactly what that installation and
-testing found.
+environment) and grew to five by actually installing three more
+(ollama, aider, opencode) and running real dispatches against them,
+rather than leaving "documented" as a permanent label for a tool that was
+simply never tried. The remaining three (cursor_agent, gemini_cli,
+lm_studio) each got a real install/CLI-verification attempt too, and each
+hit a different, disclosed, concrete wall short of a full dispatch --
+not "never tried," just "tried and blocked by something specific." See
+the next two sections for exactly what that testing found.
 
-- **claude_code**, **codex**, **ollama**, **aider**: every flag was
-  checked against that tool's own `--help`/official reference, and each
-  was proven with a real invocation before being trusted. `claude_code`'s
-  JSON parser was built from one real `claude -p ... --output-format
-  json` response. `codex`'s `--output-last-message` pattern was chosen
-  because a real run showed stdout is full of banner text ahead of the
-  actual answer. `ollama` and `aider` were verified after initially
-  shipping as documented-only -- both required actually installing the
-  tool, not just reading about it.
-- **cursor_agent**, **gemini_cli**, **opencode**, **lm_studio**: none of
-  these tools were installed or running in the environment this was
-  developed in. Each is built from that tool's official documentation,
-  and each adapter's docstring says exactly that, plus any specific gaps
-  found in that documentation -- and the gaps differ in kind, not just
-  degree:
-  - Gemini CLI's docs don't cover a working-directory flag or an
-    auto-approval flag at all (see below).
-  - OpenCode's own docs describe `--format json` as "raw JSON events"
-    (plural), not a single response object -- the parser tries one JSON
-    object, then newline-delimited events, then falls back to raw stdout,
-    and that fallback chain is itself a guess at the real shape.
-  - LM Studio's docs describe the endpoint as OpenAI-compatible, which is
-    a safe assumption (it's about as stable a JSON shape as exists) but
-    still one step short of a confirmed real response.
+- **claude_code**, **codex**, **ollama**, **aider**, **opencode**: every
+  flag was checked against that tool's own `--help`/official reference,
+  and each was proven with a real invocation before being trusted.
+  `claude_code`'s JSON parser was built from one real `claude -p ...
+  --output-format json` response. `codex`'s `--output-last-message`
+  pattern was chosen because a real run showed stdout is full of banner
+  text ahead of the actual answer. `ollama`, `aider`, and `opencode` were
+  each verified after initially shipping as documented-only -- all three
+  required actually installing the tool, not just reading about it.
+- **cursor_agent**, **gemini_cli**, **lm_studio**: real install attempts
+  were made for all three, and the gaps that remain differ in kind, not
+  just degree:
+  - Cursor CLI is installed and every flag this adapter uses was
+    confirmed against the real `--help` output -- the original docs this
+    adapter was built from turned out to be accurate. The only thing not
+    confirmed is the *success* response shape, because cursor-agent has
+    no free tier and this environment has no `CURSOR_API_KEY`.
+  - Gemini CLI's original docstring was itself built from a secondary
+    summary that missed real flags (`--approval-mode`,
+    `--include-directories`); installing the real CLI found and fixed
+    that, plus a silent gotcha (`--approval-mode` reverts to `default`
+    unless `--skip-trust` is also passed). The only thing not confirmed
+    is the success response shape, because this environment has no
+    `GEMINI_API_KEY`/Google auth.
+  - LM Studio's cask genuinely installed (`brew install --cask
+    lm-studio`, confirmed with `brew info`), but it's a GUI-first
+    Electron app with no headless mode, and this environment has no
+    window-server session for it to run in -- a structural gap, not a
+    credentials gap. See below.
 
 `Agent.verification` surfaces the verified/documented split on every
 agent, in `agent-hq agent-list`, and in `agent-hq doctor` -- but within
@@ -64,20 +72,26 @@ exercised, and would hide that some documented adapters are gappier than
 others. That's the same failure mode this whole portfolio has been built
 to avoid since the very first comparison to Livery: a "5 adapters" claim
 that sounds complete while being partly untested is worse than an honest
-"4 verified, 4 not, and here's specifically why" claim that's actually true.
+"5 verified, 3 not, and here's specifically why" claim that's actually true.
 
-## Why Gemini CLI only implements `read_only`
+## Why Gemini CLI's tool_access mapping changed after real testing
 
-Google's headless-mode docs (fetched during development) document exit
-codes precisely (0/1/42/53) but say nothing about a working-directory flag
-or an auto-approval/"yolo" flag for unattended tool use. Implementing
-`standard`/`full` anyway would mean either guessing a flag that might not
-exist, or sending no approval flag at all and risking a dispatch that
-hangs forever waiting for an interactive prompt nothing in this pipeline
-can answer. `gemini_cli.run()` raises `NotImplementedError` for anything
-but `read_only`, with the reason stated in the exception message itself --
-a documentation gap became a real, enforced constraint in the code,
-instead of a footnote nobody reads before the first hung dispatch.
+The original version of this adapter raised `NotImplementedError` for
+anything but `read_only`, on the reasoning that Google's headless-mode
+docs (as summarized by a secondary source consulted during development)
+didn't document a working-directory flag or an auto-approval flag, and
+guessing one risked a dispatch hanging forever on an interactive prompt.
+Installing the real CLI and reading its actual `--help` output showed
+that reasoning was built on incomplete information: `--approval-mode
+{default,auto_edit,yolo,plan}` and `--include-directories` are both real,
+documented-in-`--help` flags. The adapter now maps `standard` to
+`--approval-mode auto_edit` and `full` to `--approval-mode yolo`, always
+paired with `--skip-trust` (without which the approval mode silently
+reverts to `default` in an untrusted directory -- found by triggering
+that exact silent downgrade live, not inferred from docs). The lesson
+generalizes past this one adapter: a documented-only claim is only as
+good as the documentation actually consulted, and a summary of a doc is
+not the doc.
 
 ## What actually happened when Ollama and Aider were installed for real
 
@@ -126,6 +140,78 @@ things -- one non-bug, one real bug, and one finding sharper than either:
    Nothing in `dispatch()` currently cross-checks this against real
    filesystem state -- named explicitly in [What's next](README.md#whats-next)
    rather than quietly left for a future user to discover the hard way.
+
+## What actually happened when OpenCode was installed for real
+
+`npm install -g opencode-ai` (v1.18.25), pointed at the same local Ollama
+server used for `aider`. Two real things turned up, neither of which
+`--help` would have surfaced, because they're config and output-format
+details rather than flags:
+
+1. **A model name that resolves in principle doesn't mean it's reachable.**
+   `--model ollama/llama3.2:1b` failed with `ProviderModelNotFoundError:
+   Did you mean: ollama-cloud?` -- OpenCode's built-in "ollama" provider
+   points at a cloud offering, not a local server. Reaching the real local
+   instance required a custom provider block in
+   `~/.config/opencode/opencode.jsonc` pointing `baseURL` at
+   `http://localhost:11434/v1` via the `@ai-sdk/openai-compatible`
+   provider -- host configuration outside anything `run()` can set up on
+   a user's behalf, so it's documented rather than silently assumed away.
+2. **The untested parser guessed the wrong field, and the fallback chain
+   caught it without erroring.** OpenCode's docs describe `--format json`
+   as "raw JSON events" with no worked example. An initial guess assumed
+   generated text lived at a top-level `text` key on each event; a real
+   captured run showed it actually lives at `event["part"]["text"]` for
+   `type == "text"` events. The wrong guess never crashed -- it silently
+   fell through to the raw-stdout fallback, which is exactly the failure
+   mode that fallback chain exists to catch, and exactly why it needed
+   checking against real captured output before being trusted, not just
+   because it didn't error.
+
+## What actually happened when Cursor CLI, Gemini CLI, and LM Studio were investigated
+
+Prompted directly by being asked whether "documented" runtimes could
+actually be tested rather than left as disclosed guesses -- twice, once
+for the first six documented-only runtimes and again, after three of
+those were promoted, for the remaining ones.
+
+**Cursor CLI**: installed via the official install script (`curl
+https://cursor.com/install -fsS | bash`, version
+2026.08.31-4057e58). Every flag this adapter uses (`--print`,
+`--output-format json`, `--trust`, `--workspace`, `--force`, `--model`)
+was confirmed verbatim in the real `--help` output -- a useful negative
+result, since it means the original docs-only version of this adapter was
+already correct, unlike Gemini CLI's. The real, unauthenticated failure
+mode was also confirmed live: a plain non-zero exit with a plain-text
+stderr message (`Error: Authentication required...`), not a JSON error
+body -- so the adapter's existing generic non-zero-exit handling already
+covers it correctly. What's still unconfirmed is the *successful* JSON
+response shape, since cursor-agent has no free tier and this environment
+has no `CURSOR_API_KEY` to complete an authenticated run with.
+
+**Gemini CLI**: installed via `npm install -g @google/gemini-cli`
+(v0.57.0). Covered in detail in the section above -- the short version is
+that the *original* adapter's documented-only claims were themselves
+built on an incomplete secondary source, and installing the real CLI
+caught that. What's still unconfirmed, same shape as Cursor, is the
+successful response body, blocked by missing `GEMINI_API_KEY`/Google auth.
+
+**LM Studio**: `brew install --cask lm-studio` genuinely installed it
+(v0.4.23, confirmed via `brew info lm-studio`) -- but LM Studio is a
+GUI-first Electron desktop app, and this development environment has no
+interactive window-server session for it to attach to. `open -a "LM
+Studio"` returns exit 0 with no process ever appearing in `ps aux`, and
+launching the app's binary directly falls all the way through Electron
+into its embedded Node.js runtime's own bare `--help`/arg-parsing output
+instead of ever starting the app -- confirmed by literally getting Node's
+usage text back as the result. Because the app never completes first-run
+setup, `~/.lmstudio` (where its `lms` CLI and local inference server
+would live) is never created. This is a categorically different blocker
+than Cursor's or Gemini's: those two are one API key away from a full
+dispatch; LM Studio needs an actual desktop session, which no amount of
+further installing in a CLI-only environment produces. It stays
+documented-only, and the adapter's docstring says exactly why, rather
+than a generic "not installed" note.
 
 ## Why worktrees are created before the run and left in place after
 
@@ -183,12 +269,14 @@ Livery has more of everything that isn't runtime verification: 5 adapters
 all presumably exercised in real use, scheduling, Talk, Walkie-Talkie,
 Telegram, and actual production mileage. agent-hq's answer isn't "we did
 all of that too" -- it's two things done and proven (worktree isolation,
-four genuinely verified live runtimes, one of which surfaced a real
-"reported success doesn't mean it happened" finding along the way) plus
-an honest accounting of everything that's documented-only or not
-attempted at all. A shorter, truthful feature list is worth more than a
-longer one with gaps papered over -- which is the same principle this
-portfolio's very first comparison to Livery was built on, applied here to
-a bigger, riskier build instead of a narrow one, and applied again,
-mid-build, when the first verification pass turned out to be improvable
-rather than final.
+five genuinely verified live runtimes, two of which surfaced real bugs
+along the way -- Aider's "reported success doesn't mean it happened,"
+OpenCode's silently-wrong parser) plus an honest accounting of everything
+that's documented-only or not attempted at all, including *why* each
+remaining gap exists (missing credentials for two runtimes, no GUI
+session for a third -- not "didn't get around to it" for any of them). A
+shorter, truthful feature list is worth more than a longer one with gaps
+papered over -- which is the same principle this portfolio's very first
+comparison to Livery was built on, applied here to a bigger, riskier
+build instead of a narrow one, and applied again, twice, mid-build, each
+time "documented" was questioned rather than taken as a permanent label.

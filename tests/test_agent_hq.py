@@ -21,7 +21,9 @@ from agent_hq import memory as memory_mod  # noqa: E402
 from agent_hq import registry, tickets  # noqa: E402
 from agent_hq import worktree as worktree_mod  # noqa: E402
 from agent_hq.models import Agent, RuntimeResult  # noqa: E402
-from agent_hq.runtimes import aider, claude_code, codex, lm_studio, ollama, opencode  # noqa: E402
+from agent_hq.runtimes import (  # noqa: E402
+    aider, claude_code, codex, cursor_agent, gemini_cli, lm_studio, ollama, opencode,
+)
 
 AGENT_FIXTURE = """---
 id: test-agent
@@ -81,14 +83,12 @@ def test_agent_verification_property_matches_runtime():
     assert verified.verification == "verified"
 
 
-def test_ollama_and_aider_are_verified_not_documented():
+def test_ollama_aider_opencode_are_verified_not_documented():
     """Promoted from documented-only to verified after actually installing
-    Ollama + a real model and Aider, and running real dispatches against
-    them -- not asserted from the start."""
-    ollama_agent = Agent(id="o", name="O", runtime="ollama", purpose="p")
-    aider_agent = Agent(id="a", name="A", runtime="aider", purpose="p")
-    assert ollama_agent.verification == "verified"
-    assert aider_agent.verification == "verified"
+    each tool and running real dispatches against a local Ollama server --
+    not asserted from the start."""
+    for runtime in ("ollama", "aider", "opencode"):
+        assert Agent(id=runtime, name=runtime, runtime=runtime, purpose="p").verification == "verified"
 
 
 # --- tickets ------------------------------------------------------------
@@ -396,20 +396,42 @@ def test_aider_always_disables_repo_map():
     assert args[args.index("--map-tokens") + 1] == "0"
 
 
-def test_opencode_parses_single_json_object():
+# Real captured output from `opencode run "..." --format json --model
+# ollama/llama3.2:1b` against a live local Ollama server (see
+# ARCHITECTURE.md) -- not a hand-authored guess at the shape.
+REAL_OPENCODE_NDJSON = (
+    '{"type":"step_start","timestamp":1788240800110,"sessionID":"ses_1",'
+    '"part":{"id":"prt_1","type":"step-start"}}\n'
+    '{"type":"text","timestamp":1788240800121,"sessionID":"ses_1",'
+    '"part":{"id":"prt_2","type":"text","text":"hello world"}}\n'
+    '{"type":"step_finish","timestamp":1788240800121,"sessionID":"ses_1",'
+    '"part":{"id":"prt_3","type":"step-finish","tokens":{"total":21}}}'
+)
+
+
+def test_opencode_parses_real_captured_ndjson_events():
+    """The real shape: text lives at event['part']['text'] for
+    type == 'text' events, not a top-level 'text' key -- confirmed live,
+    not guessed. An earlier version of this parser assumed the top-level
+    key and silently fell through to the raw-stdout fallback on this
+    exact input."""
     fake_process = MagicMock()
     fake_process.pid = 1
-    fake_process.communicate.return_value = ('{"text": "the answer"}', "")
+    fake_process.communicate.return_value = (REAL_OPENCODE_NDJSON, "")
     fake_process.returncode = 0
     with patch("subprocess.Popen", return_value=fake_process):
         result = opencode.run(prompt="hi")
-    assert result.result_text == "the answer"
+    assert result.result_text == "hello world"
 
 
-def test_opencode_falls_back_to_ndjson_events():
+def test_opencode_concatenates_multiple_text_events():
     fake_process = MagicMock()
     fake_process.pid = 1
-    fake_process.communicate.return_value = ('{"text": "hello "}\n{"text": "world"}', "")
+    events = (
+        '{"type":"text","part":{"type":"text","text":"hello "}}\n'
+        '{"type":"text","part":{"type":"text","text":"world"}}'
+    )
+    fake_process.communicate.return_value = (events, "")
     fake_process.returncode = 0
     with patch("subprocess.Popen", return_value=fake_process):
         result = opencode.run(prompt="hi")
@@ -447,6 +469,94 @@ def test_lm_studio_raises_clearly_on_unexpected_shape():
     with patch("urllib.request.urlopen", return_value=fake_response):
         with pytest.raises(RuntimeError, match="unexpected LM Studio response shape"):
             lm_studio.run(prompt="hi")
+
+
+# --- gemini_cli (real error shape confirmed, success shape still assumed) ---
+
+# Real captured output from an actual unauthenticated `gemini -p ...
+# --output-format json --skip-trust` run -- confirms the error JSON shape
+# and that the exit code equals error.code (41 here), not a fixed enum.
+REAL_GEMINI_ERROR_JSON = (
+    '{"session_id": "909e6cda-97c3-4e62-863b-5a3c3148b1bc", '
+    '"error": {"type": "Error", "message": "Please set an Auth method", "code": 41}}'
+)
+
+
+def test_gemini_cli_raises_with_real_error_shape():
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = (REAL_GEMINI_ERROR_JSON, "")
+    fake_process.returncode = 41
+    with patch("subprocess.Popen", return_value=fake_process):
+        with pytest.raises(RuntimeError, match="code 41"):
+            gemini_cli.run(prompt="hi")
+
+
+def test_gemini_cli_passes_skip_trust_with_any_approval_mode():
+    """--approval-mode silently downgrades to 'default' in an untrusted
+    directory unless --skip-trust is also passed -- a real, confirmed
+    gotcha, not a guess. Must never be sent alone."""
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = ('{"response": "ok"}', "")
+    fake_process.returncode = 0
+
+    with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
+        gemini_cli.run(prompt="hi", tool_access="read_only")
+    assert "--approval-mode" not in mock_popen.call_args[0][0]
+
+    with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
+        gemini_cli.run(prompt="hi", tool_access="standard")
+    args = mock_popen.call_args[0][0]
+    assert "--approval-mode" in args and "auto_edit" in args
+    assert "--skip-trust" in args
+
+
+def test_gemini_cli_full_uses_yolo_not_a_full_bypass_flag():
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = ('{"response": "ok"}', "")
+    fake_process.returncode = 0
+    with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
+        gemini_cli.run(prompt="hi", tool_access="full")
+    args = mock_popen.call_args[0][0]
+    assert "yolo" in args
+    assert "--dangerously-skip-permissions" not in args
+
+
+# --- cursor_agent (flags now confirmed real; response shape still unauthenticated) ---
+
+def test_cursor_agent_never_uses_full_yolo_alias():
+    """--yolo is a real, documented alias for --force (confirmed against
+    the real --help). This adapter uses --force explicitly rather than
+    the alias, for the same 'use the name a --help reader expects'
+    reasoning as aider's --yes-always."""
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = ('{"result": "ok"}', "")
+    fake_process.returncode = 0
+    with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
+        cursor_agent.run(prompt="hi", tool_access="full")
+    args = mock_popen.call_args[0][0]
+    assert "--force" in args
+    assert "--yolo" not in args
+
+
+def test_cursor_agent_raises_on_real_auth_error_shape():
+    """Real captured behavior: an unauthenticated cursor-agent exits
+    non-zero with a plain-text stderr message (confirmed live), not a
+    JSON error body -- unlike gemini_cli. This adapter's generic
+    non-zero-exit handling covers it correctly without special-casing."""
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = (
+        "", "Error: Authentication required. Please run 'agent login' first, "
+        "or set CURSOR_API_KEY environment variable.",
+    )
+    fake_process.returncode = 1
+    with patch("subprocess.Popen", return_value=fake_process):
+        with pytest.raises(RuntimeError, match="Authentication required"):
+            cursor_agent.run(prompt="hi")
 
 
 if __name__ == "__main__":

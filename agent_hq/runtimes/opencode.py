@@ -1,18 +1,37 @@
-"""DOCUMENTED, NOT VERIFIED: OpenCode (open-source, model-agnostic CLI harness).
+"""VERIFIED runtime: OpenCode (open-source, model-agnostic CLI harness).
 
-Not installed in the environment this was developed in. Built from
-https://opencode.ai/docs/cli/ (fetched during development).
+Verified live: installed via `npm install -g opencode-ai` (v1.18.25), then
+dispatched against the same local Ollama server used to verify ollama.py
+and aider.py -- zero API key needed, same as those two.
 
-Known documentation gap: exit codes aren't documented, same as several
-other adapters here. `--format json` is documented as "raw JSON events"
-(plural) rather than one clean response object like Claude Code's --
-this reads as streaming/event-based output, not a single JSON blob. This
-adapter parses defensively: try one JSON object first, then newline-
-delimited JSON events (accumulating any text-bearing fields found), then
-fall back to raw stdout. That fallback chain is a guess at the actual
-shape, not a confirmed one -- the least-confident parser in this
-registry, and it says so here rather than presenting mocked-test coverage
-as equivalent to a real one.
+Two real things found that no amount of re-reading `--help` would have
+surfaced, because they're config and output-format details, not flags:
+
+1. **A registered model isn't enough -- OpenCode needs an explicit
+   provider entry to reach a local model at all.** `--model ollama/
+   llama3.2:1b` alone fails with `ProviderModelNotFoundError: Model not
+   found: ollama/llama3.2:1b. Did you mean: ollama-cloud?` -- OpenCode's
+   built-in "ollama" reference is a cloud offering, not a pointer to a
+   local server. Reaching a real local Ollama instance requires a custom
+   provider block in `~/.config/opencode/opencode.jsonc`:
+   ```json
+   {"provider": {"ollama": {"npm": "@ai-sdk/openai-compatible",
+     "options": {"baseURL": "http://localhost:11434/v1"},
+     "models": {"llama3.2:1b": {}}}}}
+   ```
+   This is host/environment configuration, not something this adapter's
+   `run()` can do on an end user's behalf -- it's documented here and in
+   ARCHITECTURE.md instead.
+2. **The real `--format json` shape is confirmed, and it's not what an
+   initial best-effort guess assumed.** OpenCode's own docs describe
+   "raw JSON events" without an example; a real captured run showed each
+   line is a distinct event (`step_start`, `text`, `step_finish`, ...),
+   and critically, the generated text lives at `event["part"]["text"]`
+   for `type == "text"` events -- not a top-level `text` key on the event
+   itself, which is what an untested guess had assumed. Verified against
+   the real captured output before writing this parser, and the earlier
+   guess's failure mode (falling through to the raw-stdout fallback,
+   silently) is exactly why the fallback chain exists.
 """
 
 from __future__ import annotations
@@ -33,15 +52,17 @@ def _best_effort_parse(stdout: str) -> str:
         return data.get("text") or data.get("result") or data.get("content") or stdout
     except json.JSONDecodeError:
         pass
+
     texts = []
     for line in stdout.splitlines():
         try:
             event = json.loads(line)
-            text = event.get("text") or event.get("content")
-            if text:
-                texts.append(text)
         except json.JSONDecodeError:
             continue
+        if event.get("type") == "text":
+            text = (event.get("part") or {}).get("text")
+            if text:
+                texts.append(text)
     return "".join(texts) if texts else stdout
 
 
