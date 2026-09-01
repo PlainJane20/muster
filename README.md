@@ -43,11 +43,27 @@ Run `agent-hq onboard` and it walks you through all of this interactively — ch
 
 agent-hq is a git-native platform for running a small team of AI agents locally: hire an agent (one markdown file), file a ticket, dispatch it for real. It's a positioned, honest competitor to [Livery](https://github.com/sohailmamdani/livery) — same core idea (agents and tickets as plain files, no database) — built independently, with its own tradeoffs stated plainly rather than glossed over.
 
-**Explore:** [vs. Livery](#how-this-compares-to-livery) · [Verification](#what-verified-actually-means-here) · [How it works](#how-it-works) · [Architecture](#architecture) · [Setup](#setup) · [Usage](#usage)
+**Explore:** [Who it's for](#who-its-for) · [vs. Livery](#how-this-compares-to-livery) · [Verification](#what-verified-actually-means-here) · [How it works](#how-it-works) · [Architecture](#architecture) · [Setup](#setup) · [Usage](#usage)
 
 ### Why this exists
 
 Most "AI agent platform" projects either (a) claim to support a long list of tools without anyone having actually run half of them, or (b) hide how thin that list really is behind a database and a UI. agent-hq does neither: every runtime here is labeled verified or documented based on whether it was actually installed and dispatched against for real — not asserted — and the whole thing is a handful of Python files and markdown, no server, no database, so you can read every line that decides what happens to your machine.
+
+### What it does
+
+In one sentence: it's a single, consistent front door to a whole shelf of different AI coding/writing tools, so you stop context-switching between eight CLIs' worth of flags, auth methods, and output formats to get work done. Concretely:
+
+- **Hire** an agent once (a markdown file naming which tool it uses and how much it's allowed to do), instead of re-typing that tool's flags every time.
+- **File a ticket** the same way regardless of which tool ends up running it — one format, not eight.
+- **Dispatch for real**, with a plain three-level access dial (`read_only` / `standard` / `full`) that means the same thing across every tool, instead of you having to know that this one calls it `--sandbox`, that one calls it `--approval-mode`, and another has no concept of it at all.
+- **Get an honest answer on "did it actually work"** — a real git worktree per dispatch, and now a real filesystem check that catches a tool claiming success on a change that never happened (see the example above).
+
+### Who it's for
+
+- **Anyone juggling more than one AI coding tool** (Claude Code for one thing, Aider or a local Ollama model for another, occasionally Codex or Gemini) who's tired of relearning each one's CLI just to run a task — one `tool_access` dial and one ticket format cover all of them.
+- **Someone new to AI agents entirely** — `agent-hq onboard` is built for exactly this: no assumed vocabulary, checks what's actually installed on your machine, and walks you through registering your first agent by answering plain-English questions.
+- **Anyone evaluating which AI CLI tools are actually worth trusting** — the verified/documented split, and the real bugs found while testing each one, are a more honest signal than any tool's own marketing page.
+- **Technical leads or PMs coordinating AI-assisted work across a small team**, who want a lightweight, git-native record of who (which agent) did what (which ticket) and whether it's actually verified to have worked — without standing up infrastructure for it.
 
 ### A real example, not a mockup
 
