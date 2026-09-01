@@ -129,6 +129,21 @@ Full design rationale — including the exact commands run to verify Claude Code
 - **Some official docs have real gaps.** Gemini CLI's headless-mode page doesn't document a working-directory flag or an auto-approval flag. Rather than guess, the adapter only implements `read_only` access and says exactly why in its own docstring.
 - **`--output-last-message <file>` beats parsing stdout.** A real `codex exec` run's stdout is full of banner and progress text ahead of the actual answer; the file argument gets written with just the final message.
 
+Worktree isolation, proven the same way — not asserted. A real dispatch to a file-editing agent (`tool_access: standard`) created `worktree-proof.txt`, and afterward:
+
+```
+$ ls worktree-proof.txt                 # main working tree
+ls: worktree-proof.txt: No such file or directory
+
+$ cat .agent-hq/worktrees/0003-*/worktree-proof.txt
+worktree isolation works.
+
+$ git status --short                    # main tree, after the dispatch
+ M tickets/0003-create-a-scratch-file.md
+```
+
+The file exists only in the isolated worktree. The main tree's only change is the ticket status update this tool itself made — nothing the agent did leaked outside its sandbox.
+
 ## What's next
 
 - [x] Two verified live runtimes (Claude Code, Codex), three documented (Cursor, Ollama, Gemini CLI)

@@ -1,7 +1,7 @@
 ---
 id: '0003'
 title: Create a scratch file
-status: assigned
+status: done
 created: '2026-08-31'
 tags:
 - editing

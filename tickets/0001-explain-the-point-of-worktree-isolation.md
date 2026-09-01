@@ -1,7 +1,7 @@
 ---
 id: '0001'
 title: Explain the point of worktree isolation
-status: in_progress
+status: done
 created: '2026-08-31'
 tags:
 - research
