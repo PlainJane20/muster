@@ -1,12 +1,12 @@
-"""DOCUMENTED, NOT VERIFIED: Ollama's local HTTP API.
+"""VERIFIED runtime: Ollama's local HTTP API.
 
-No Ollama server was running in the environment this was developed in,
-so this has never made a real request. It comes from Ollama's official
-API reference (https://github.com/ollama/ollama/blob/main/docs/api.md,
-fetched during development), which is stable and simple enough (one JSON
-POST, one JSON response) that it's a lower-risk "documented" adapter than
-a CLI with unknown flags -- there's very little surface for the docs to
-be wrong about.
+Originally documented-only (no Ollama server was running when this was
+first written), then actually verified: Ollama was installed via
+Homebrew, a real model (llama3.2:1b) was pulled, and this exact function
+was called against the real running server. It returned a real response
+("Goodbye world." to a "reply with exactly hello world" prompt -- correct
+code path, imperfect small-model instruction-following, which is a model
+quality question, not a question about whether this adapter works).
 
 This is the one runtime with no tool access at all: plain Ollama's
 /api/generate is text generation only, no file/shell tools. tool_access

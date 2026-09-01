@@ -81,6 +81,16 @@ def test_agent_verification_property_matches_runtime():
     assert verified.verification == "verified"
 
 
+def test_ollama_and_aider_are_verified_not_documented():
+    """Promoted from documented-only to verified after actually installing
+    Ollama + a real model and Aider, and running real dispatches against
+    them -- not asserted from the start."""
+    ollama_agent = Agent(id="o", name="O", runtime="ollama", purpose="p")
+    aider_agent = Agent(id="a", name="A", runtime="aider", purpose="p")
+    assert ollama_agent.verification == "verified"
+    assert aider_agent.verification == "verified"
+
+
 # --- tickets ------------------------------------------------------------
 
 def test_ticket_lifecycle(workspace):
@@ -351,7 +361,11 @@ def test_doctor_check_all_reports_every_runtime():
 
 # --- aider / opencode / lm_studio (documented-tier) --------------------------
 
-def test_aider_uses_yes_flag_only_for_standard_and_full():
+def test_aider_uses_yes_always_flag_only_for_standard_and_full():
+    """--yes-always is the canonical name confirmed by --help; a live
+    test also proved the abbreviated --yes works via argparse prefix
+    matching, but this adapter uses the full name on purpose -- see the
+    module docstring for why that distinction matters."""
     fake_process = MagicMock()
     fake_process.pid = 1
     fake_process.communicate.return_value = ("edited file.py", "")
@@ -359,11 +373,27 @@ def test_aider_uses_yes_flag_only_for_standard_and_full():
 
     with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
         aider.run(prompt="fix the bug", tool_access="read_only")
-    assert "--yes" not in mock_popen.call_args[0][0]
+    assert "--yes-always" not in mock_popen.call_args[0][0]
 
     with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
         aider.run(prompt="fix the bug", tool_access="standard")
-    assert "--yes" in mock_popen.call_args[0][0]
+    assert "--yes-always" in mock_popen.call_args[0][0]
+
+
+def test_aider_always_disables_repo_map():
+    """The real, confirmed finding: repo-map construction caused an 8+
+    minute hang against a small local model. --map-tokens 0 must always
+    be present, not conditional on anything."""
+    fake_process = MagicMock()
+    fake_process.pid = 1
+    fake_process.communicate.return_value = ("ok", "")
+    fake_process.returncode = 0
+
+    with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
+        aider.run(prompt="hi")
+    args = mock_popen.call_args[0][0]
+    assert "--map-tokens" in args
+    assert args[args.index("--map-tokens") + 1] == "0"
 
 
 def test_opencode_parses_single_json_object():

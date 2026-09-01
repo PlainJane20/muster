@@ -11,7 +11,7 @@
 Hire agents. File tickets. Dispatch to real, live runtimes — not canned scripts.
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![2 Verified Runtimes](https://img.shields.io/badge/Runtimes-2_Verified_%2B_6_Documented-2a9d8f)]()
+[![2 Verified Runtimes](https://img.shields.io/badge/Runtimes-4_Verified_%2B_4_Documented-2a9d8f)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
 [![Status: Reference Implementation](https://img.shields.io/badge/status-reference%20implementation-6f42c1)](#whats-next)
 
@@ -21,9 +21,9 @@ Hire agents. File tickets. Dispatch to real, live runtimes — not canned script
 
 <div align="center">
 
-| 9 registered agents | 8 runtimes | 30 tests | New to AI agents? |
+| 10 registered agents | 8 runtimes | 32 tests | New to AI agents? |
 |:---:|:---:|:---:|:---:|
-| One markdown file each | 2 verified live, 6 documented-only | Fully offline, real git worktree tests | Run `agent-hq onboard` |
+| One markdown file each | 4 verified live, 4 documented-only | Fully offline, real git worktree tests | Run `agent-hq onboard` |
 
 </div>
 
@@ -51,7 +51,7 @@ agent-hq is a git-native platform for running a small team of AI agents locally:
 
 | | Livery | agent-hq |
 |---|---|---|
-| **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | **8 registered** (those 5 plus Gemini CLI, Aider, OpenCode) — but **only 2 verified against a real run** (Claude Code, Codex). The other 6 are documented-only, and say so everywhere, not just in a footnote |
+| **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | **8 registered** (those 5 plus Gemini CLI, Aider, OpenCode) — **4 verified against real runs** (Claude Code, Codex, Ollama, Aider — the last two installed and tested live after the first pass shipped as "documented"). The other 4 are documented-only, and say so everywhere, not just in a footnote |
 | **Worktree isolation** | Yes, via `--worktree` | Yes — real `git worktree` commands, tested against a real repo |
 | **Agent assignment** | Manual (`assignee` field) | Manual (`assign` command) — same model, this isn't the routing-intelligence project (see [switchboard](https://github.com/PlainJane20/switchboard) for that) |
 | **Memory** | `memory/{decisions,lessons,preferences}` | Same shape — decisions, lessons, preferences, git-tracked markdown |
@@ -69,10 +69,10 @@ Every runtime falls into exactly one of two buckets, and it's disclosed in three
 |---|---|---|
 | **Claude Code** | ✅ Verified | Flags checked against `claude --help` on the real installed CLI; JSON response shape taken from one real `claude -p` call; a full dispatch proven end-to-end (real session id, real cost) |
 | **Codex** | ✅ Verified | Flags checked against `codex exec --help`; proven with a real invocation (`-s read-only -o <file>`, exit 0, correct output) |
+| **Ollama** | ✅ Verified | Installed via Homebrew, pulled a real model, called the actual running server through this exact adapter — real response returned |
+| **Aider** | ✅ Verified, with a real caveat found | Installed via pip, pointed at the local Ollama server — but a live edit dispatch revealed that "Applied edit" + exit 0 does **not** guarantee a persisted change (see [Real findings](#real-findings-from-building-and-testing-this)) |
 | **Cursor** | 📄 Documented only | Built from Cursor's official CLI docs. cursor-agent isn't installed in this environment — nothing here has been run for real |
-| **Ollama** | 📄 Documented only | Built from Ollama's official API reference. No server was running in this environment |
 | **Gemini CLI** | 📄 Documented only | Built from Google's docs, which have real gaps (no documented working-directory or auto-approve flag) — this adapter only implements read-only access as a result, and says why |
-| **Aider** | 📄 Documented only | Built from Aider's scripting docs. `read_only` on this one is the least-verified setting in the whole registry — the docs don't confirm what happens to a proposed edit with nothing to answer its confirmation prompt |
 | **OpenCode** | 📄 Documented only | Built from OpenCode's CLI docs. `--format json` is documented as "raw events," not one clean object — this adapter's parser is a best-effort guess, and says so |
 | **LM Studio** | 📄 Documented only | Built from LM Studio's docs, which describe the endpoint as OpenAI-compatible — a safe assumption, still not independently re-confirmed against a real response |
 
@@ -113,11 +113,9 @@ flowchart TD
     WorktreeCheck -->|no| Shared["Run in shared cwd"]
     Worktree --> Runtime{"Which runtime?"}
     Shared --> Runtime
-    Runtime -->|claude_code| CC["claude -p<br/>(verified)"]
-    Runtime -->|codex| CX["codex exec<br/>(verified)"]
-    Runtime -->|"cursor_agent / gemini_cli / ollama /<br/>aider / opencode / lm_studio"| Doc["documented-only adapters (6)"]
+    Runtime -->|"claude_code / codex /<br/>ollama / aider"| CC["Verified runtimes (4)"]
+    Runtime -->|"cursor_agent / gemini_cli /<br/>opencode / lm_studio"| Doc["Documented-only adapters (4)"]
     CC --> Attempt[("DispatchAttempt<br/>pid, status, result")]
-    CX --> Attempt
     Doc --> Attempt
     Attempt --> Ledger["close --summary<br/>-> ledger.md"]
 ```
@@ -132,7 +130,11 @@ Full design rationale — including the exact commands run to verify Claude Code
 - **A "verified" adapter that only works under one auth configuration isn't actually verified.** Claude Code's `--bare` mode looked like the obvious default for scripted calls; it fails outright on a machine where managed settings pin OAuth login. The adapter omits it.
 - **Some official docs have real gaps.** Gemini CLI's headless-mode page doesn't document a working-directory flag or an auto-approval flag. Rather than guess, the adapter only implements `read_only` access and says exactly why in its own docstring.
 - **`--output-last-message <file>` beats parsing stdout.** A real `codex exec` run's stdout is full of banner and progress text ahead of the actual answer; the file argument gets written with just the final message.
-- **"Documented" isn't one confidence level -- some docs are gappier than others.** Aider's scripting docs don't say what happens to an edit with no way to confirm it; OpenCode's own docs describe its JSON output as "raw events" rather than a single object. Both adapters are built and tested, but their docstrings say exactly which specific behavior is a best-effort guess, rather than letting "documented" imply more confidence than the source material actually supports.
+- **"Documented" isn't one confidence level -- some docs are gappier than others.** OpenCode's own docs describe its JSON output as "raw events" rather than a single object, so that parser is an explicit best-effort guess. Aider's gap turned out to be resolvable — see below.
+- **"Documented" can be upgraded to "verified" by just... installing the thing.** Ollama shipped as documented-only because no server was running during initial development. Installing it via Homebrew, pulling a model, and calling the real adapter took about five minutes and turned a disclosed guess into a proven fact. Not every documented adapter needs to stay that way forever.
+- **A flag that isn't in `--help`'s summary can still be real.** `--yes` looked like a wrong flag name (only `--yes-always` appears in Aider's `--help`). A live test with `--yes` proved it actually works — argparse's default prefix-matching resolves it to `--yes-always` unambiguously. Reported here as a correction to an earlier internal finding, not hidden: "looked like a bug, tested it, wasn't one" is exactly the kind of result this whole verification exercise exists to produce, not just bug reports.
+- **A real bug did turn up in the same round of testing.** Aider's repo-map feature caused an 8+ minute hang with zero output against a small local model inside a real git repo — confirmed by watching the process stay alive (barely any CPU used) while a parallel direct call to the same model also stalled. `--map-tokens 0` disables just that feature and fixed it completely, confirmed with a clean rerun.
+- **The sharpest finding: a tool can report success without the change actually happening.** A live edit dispatch through the *full* pipeline (ticket → worktree → Aider → local model) printed "Applied edit to README.md" and exited 0 — but `git log` in that worktree afterward showed no new commit. The small model's malformed response apparently couldn't be cleanly reconciled into a real file change, and aider reported success anyway. A `DispatchAttempt` with `status: succeeded` means "the tool didn't error," not "the requested change provably happened" — verifying the latter means checking the worktree yourself.
 
 Worktree isolation, proven the same way — not asserted. A real dispatch to a file-editing agent (`tool_access: standard`) created `worktree-proof.txt`, and afterward:
 
@@ -151,13 +153,14 @@ The file exists only in the isolated worktree. The main tree's only change is th
 
 ## What's next
 
-- [x] Two verified live runtimes (Claude Code, Codex), six documented (Cursor, Ollama, Gemini CLI, Aider, OpenCode, LM Studio)
-- [x] Real git worktree isolation, tested against a real repo
+- [x] Four verified live runtimes (Claude Code, Codex, Ollama, Aider), four documented (Cursor, Gemini CLI, OpenCode, LM Studio)
+- [x] Real git worktree isolation, tested against a real repo, including a real (imperfect) file-editing dispatch through the full pipeline
 - [x] Generalized memory (decisions, lessons, preferences)
 - [x] Beginner-friendly onboarding (`onboard`, `doctor`, interactive `agent-hire`)
+- [ ] Verifying dispatch success against the actual filesystem state, not just exit code + stdout — Aider's live test showed these can disagree; nothing in `dispatch()` cross-checks this yet
 - [ ] Automatic routing — this tool assigns manually, on purpose; see [switchboard](https://github.com/PlainJane20/switchboard) for the automatic-routing version of this idea
 - [ ] Scheduling, Talk mode, Walkie-Talkie debate, Telegram-style notifications — all real ideas, not built in this version
-- [ ] Getting any documented-only adapter to "verified" — needs that tool actually installed and a real dispatch run against it; the code is ready, the proof isn't
+- [ ] Getting Cursor, Gemini CLI, OpenCode, or LM Studio to "verified" — needs that tool actually installed (or, for Cursor/Gemini, an account) and a real dispatch run against it
 
 ## Setup
 
@@ -226,17 +229,17 @@ agent-hq/
 │   ├── runtimes/
 │   │   ├── claude_code.py    VERIFIED
 │   │   ├── codex.py          VERIFIED
+│   │   ├── ollama.py         VERIFIED (installed + tested live after shipping as documented)
+│   │   ├── aider.py          VERIFIED, with a real caveat -- "succeeded" doesn't guarantee a persisted change
 │   │   ├── cursor_agent.py   documented only
-│   │   ├── ollama.py         documented only
 │   │   ├── gemini_cli.py     documented only, read_only-only
-│   │   ├── aider.py          documented only, read_only is the least-verified setting here
 │   │   ├── opencode.py       documented only, best-effort JSON-events parser
 │   │   └── lm_studio.py      documented only, OpenAI-compatible response shape assumed
 │   └── cli.py                `agent-hq <command>`, including the onboard wizard
-├── agents/                   Nine example agents, one per runtime (two on claude_code)
-├── tickets/                  Three real tickets, dispatched for real to prove it works
+├── agents/                   Ten example agents across 8 runtimes (two each on claude_code and aider)
+├── tickets/                  Five real tickets, dispatched for real to prove it works
 ├── memory/{decisions,lessons,preferences}/
-├── tests/                    30 tests -- real git for worktrees, mocked subprocess/HTTP for runtimes
+├── tests/                    32 tests -- real git for worktrees, mocked subprocess/HTTP for runtimes
 └── ARCHITECTURE.md           Design rationale, decision by decision
 ```
 

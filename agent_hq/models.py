@@ -33,10 +33,10 @@ MemoryType = Literal["decision", "lesson", "preference"]
 RUNTIME_VERIFICATION: dict = {
     "claude_code": "verified",
     "codex": "verified",
+    "ollama": "verified",
+    "aider": "verified",
     "cursor_agent": "documented",
-    "ollama": "documented",
     "gemini_cli": "documented",
-    "aider": "documented",
     "opencode": "documented",
     "lm_studio": "documented",
 }
