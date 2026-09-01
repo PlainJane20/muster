@@ -23,7 +23,13 @@ VerificationTier = Literal["verified", "documented"]
 ToolAccess = Literal["read_only", "standard", "full"]
 RiskTier = Literal["low", "medium", "high"]
 TicketStatus = Literal["open", "assigned", "in_progress", "done", "cancelled"]
-AttemptStatus = Literal["running", "succeeded", "failed"]
+# "paused" and "terminated" are set from a *second* CLI invocation acting
+# on an already-running attempt's real PID (see control.py) -- not by
+# dispatch() itself, which is still the only thing that writes the final
+# "succeeded"/"failed". Pausing doesn't stop dispatch()'s blocking
+# communicate() call from eventually returning; it just freezes the real
+# OS process underneath it until resumed. See control.py's docstring.
+AttemptStatus = Literal["running", "succeeded", "failed", "paused", "terminated"]
 MemoryType = Literal["decision", "lesson", "preference"]
 
 # Which runtimes were actually exercised against a live install during

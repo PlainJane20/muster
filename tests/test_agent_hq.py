@@ -15,6 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agent_hq import attempts as attempts_mod  # noqa: E402
+from agent_hq import control as control_mod  # noqa: E402
 from agent_hq import dispatch as dispatch_mod  # noqa: E402
 from agent_hq import doctor as doctor_mod  # noqa: E402
 from agent_hq import memory as memory_mod  # noqa: E402
@@ -162,6 +163,77 @@ def test_attempt_lifecycle(tmp_path):
     updated = attempts_mod.update_attempt(attempt.id, attempts_dir=attempts_dir, status="succeeded", result_text="ok")
     assert updated.status == "succeeded"
     assert attempts_mod.list_attempts(ticket_id="0001", attempts_dir=attempts_dir)[0].result_text == "ok"
+
+
+# --- control (real OS processes and real signals, no mocking) ----------
+
+def _process_state(pid: int) -> str:
+    """'T' means stopped (SIGSTOP'd); anything else means running/sleeping.
+    Real `ps` output, not a guess -- same macOS/Linux `ps -o state=` both
+    understand."""
+    result = subprocess.run(["ps", "-o", "state=", "-p", str(pid)], capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+def test_pause_resume_kill_a_real_process(tmp_path):
+    """No mocking: a real `sleep` process, paused with a real SIGSTOP,
+    confirmed stopped via `ps`, resumed with a real SIGCONT, then killed
+    -- proving control.py's signals actually reach a real OS process
+    across what would ordinarily be two separate terminal invocations."""
+    attempts_dir = tmp_path / "attempts"
+    proc = subprocess.Popen(["sleep", "30"])
+    try:
+        attempt = attempts_mod.record_attempt("0001", "test-agent", "prompt", pid=proc.pid, attempts_dir=attempts_dir)
+
+        paused = control_mod.pause_attempt(attempt.id, attempts_dir=attempts_dir)
+        assert paused.status == "paused"
+        assert _process_state(proc.pid) == "T"
+
+        resumed = control_mod.resume_attempt(attempt.id, attempts_dir=attempts_dir)
+        assert resumed.status == "running"
+        assert _process_state(proc.pid) != "T"
+
+        killed = control_mod.kill_attempt(attempt.id, attempts_dir=attempts_dir)
+        assert killed.status == "terminated"
+        proc.wait(timeout=5)
+        assert control_mod.is_alive(proc.pid) is False
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+
+
+def test_pause_raises_clearly_on_unknown_attempt(tmp_path):
+    with pytest.raises(ValueError, match="no attempt found"):
+        control_mod.pause_attempt("does-not-exist", attempts_dir=tmp_path / "attempts")
+
+
+def test_pause_raises_clearly_when_not_running(tmp_path):
+    attempts_dir = tmp_path / "attempts"
+    attempt = attempts_mod.record_attempt("0001", "a", "p", pid=123, attempts_dir=attempts_dir)
+    attempts_mod.update_attempt(attempt.id, attempts_dir=attempts_dir, status="succeeded")
+    with pytest.raises(RuntimeError, match="not running"):
+        control_mod.pause_attempt(attempt.id, attempts_dir=attempts_dir)
+
+
+def test_resume_raises_clearly_when_not_paused(tmp_path):
+    attempts_dir = tmp_path / "attempts"
+    attempt = attempts_mod.record_attempt("0001", "a", "p", pid=123, attempts_dir=attempts_dir)
+    with pytest.raises(RuntimeError, match="not paused"):
+        control_mod.resume_attempt(attempt.id, attempts_dir=attempts_dir)
+
+
+def test_kill_marks_terminated_without_crashing_when_process_already_dead(tmp_path):
+    """The exact stale-status scenario this module is honest about: the
+    recorded pid points at a process that's already gone (a real dead
+    pid: spawn, wait for exit, then act on the stale record). Killing it
+    should mark terminated cleanly, not raise a raw ProcessLookupError."""
+    attempts_dir = tmp_path / "attempts"
+    proc = subprocess.Popen(["true"])
+    proc.wait()
+    attempt = attempts_mod.record_attempt("0001", "a", "p", pid=proc.pid, attempts_dir=attempts_dir)
+    result = control_mod.kill_attempt(attempt.id, attempts_dir=attempts_dir)
+    assert result.status == "terminated"
 
 
 # --- worktree (real git, no mocking) -----------------------------------------

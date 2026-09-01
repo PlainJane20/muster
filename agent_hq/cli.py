@@ -10,6 +10,7 @@ from datetime import date
 from pathlib import Path
 
 from agent_hq import attempts as attempts_mod
+from agent_hq import control as control_mod
 from agent_hq import dispatch as dispatch_mod
 from agent_hq import doctor as doctor_mod
 from agent_hq import memory as memory_mod
@@ -160,7 +161,15 @@ def cmd_ticket_show(args: argparse.Namespace) -> int:
     if ticket_attempts:
         print("\n  dispatch attempts:")
         for a in ticket_attempts:
-            print(f"    {a.id}  {a.status:<10} pid={a.pid}")
+            # The stored status can go stale (a process can die, be
+            # killed externally, etc. without this record ever hearing
+            # about it) -- same honesty this repo already applies to
+            # filesystem_verified. Show the real, live process state
+            # alongside the recorded one instead of only trusting the file.
+            live = ""
+            if a.pid is not None and a.status in ("running", "paused"):
+                live = " (process alive)" if control_mod.is_alive(a.pid) else " (process no longer running -- status is stale)"
+            print(f"    {a.id}  {a.status:<10} pid={a.pid}{live}")
     return 0
 
 
@@ -200,6 +209,42 @@ def cmd_close(args: argparse.Namespace) -> int:
     ticket = tickets.update_ticket(args.ticket_id, status="done")
     tickets.append_ledger(ticket, args.summary)
     print(f"Closed {args.ticket_id}.")
+    return 0
+
+
+# --- process control (pause/resume/kill a running dispatch) --------------
+#
+# Real OS signals against the real PID dispatch() already recorded --
+# no daemon, no background service. Only meaningful while the attempt
+# that spawned the process is still alive; see control.py's docstring.
+
+def cmd_pause(args: argparse.Namespace) -> int:
+    try:
+        attempt = control_mod.pause_attempt(args.attempt_id)
+    except (ValueError, RuntimeError) as e:
+        print(f"Couldn't pause {args.attempt_id}: {e}")
+        return 1
+    print(f"Paused attempt {attempt.id} (pid {attempt.pid}). Resume with: agent-hq resume {attempt.id}")
+    return 0
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    try:
+        attempt = control_mod.resume_attempt(args.attempt_id)
+    except (ValueError, RuntimeError) as e:
+        print(f"Couldn't resume {args.attempt_id}: {e}")
+        return 1
+    print(f"Resumed attempt {attempt.id} (pid {attempt.pid}).")
+    return 0
+
+
+def cmd_kill(args: argparse.Namespace) -> int:
+    try:
+        attempt = control_mod.kill_attempt(args.attempt_id, force=args.force)
+    except (ValueError, RuntimeError) as e:
+        print(f"Couldn't kill {args.attempt_id}: {e}")
+        return 1
+    print(f"Terminated attempt {attempt.id} (pid {attempt.pid}, {'SIGKILL' if args.force else 'SIGTERM'}).")
     return 0
 
 
@@ -304,6 +349,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_close.add_argument("ticket_id")
     p_close.add_argument("--summary", required=True)
     p_close.set_defaults(func=cmd_close)
+
+    p_pause = sub.add_parser("pause", help="Pause a running dispatch's real process (SIGSTOP) -- see `ticket-show` for attempt ids")
+    p_pause.add_argument("attempt_id")
+    p_pause.set_defaults(func=cmd_pause)
+
+    p_resume = sub.add_parser("resume", help="Resume a paused dispatch's real process (SIGCONT)")
+    p_resume.add_argument("attempt_id")
+    p_resume.set_defaults(func=cmd_resume)
+
+    p_kill = sub.add_parser("kill", help="Terminate a running or paused dispatch's real process")
+    p_kill.add_argument("attempt_id")
+    p_kill.add_argument("--force", action="store_true", help="SIGKILL instead of SIGTERM")
+    p_kill.set_defaults(func=cmd_kill)
 
     sub.add_parser("worktree-list", help="List active worktrees").set_defaults(func=cmd_worktree_list)
     p_wt_rm = sub.add_parser("worktree-remove", help="Remove a ticket's worktree")

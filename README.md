@@ -21,7 +21,7 @@ Hire agents. File tickets. Dispatch to real, live runtimes — not canned script
 
 <div align="center">
 
-| 12 registered agents | 8 runtimes | 46 tests | New to AI agents? |
+| 12 registered agents | 8 runtimes | 51 tests | New to AI agents? |
 |:---:|:---:|:---:|:---:|
 | One markdown file each | 6 verified live, 2 documented (flags/errors confirmed live) | Fully offline, real git worktree tests | Run `agent-hq onboard` |
 
@@ -211,6 +211,7 @@ The file exists only in the isolated worktree. The main tree's only change is th
 - [ ] Scheduling, Talk mode, Walkie-Talkie debate, Telegram-style notifications — all real ideas, not built in this version
 - [x] ~~Getting Cursor to fully "verified"~~ — deliberately stopped here. Every flag and error shape is confirmed live; the only remaining gap is an authenticated success response, which needs a paid `CURSOR_API_KEY` (no free tier, unlike Gemini's). Decided not to pay for a subscription just to close out one adapter's verification — this is a disclosed, cost-based stopping point, not an oversight. The exact steps to finish it if that ever changes are in `cursor_agent.py`'s docstring
 - [ ] Getting LM Studio to "verified" at all — needs a machine with a real interactive desktop session, not just another install attempt
+- [x] Real process control (`pause`/`resume`/`kill`) over a running dispatch, from a second terminal — real `SIGSTOP`/`SIGCONT`/`SIGTERM`/`SIGKILL` against the actual PID `dispatch()` already records, no daemon or background service added. This is a deliberately scaled-down answer to a much larger control-plane spec (a persistent daemon, WebSocket/gRPC telemetry, a dashboard UI) that was proposed for this project — that full version was declined because it abandons the "no server, read every line" design this whole repo is built on; see ARCHITECTURE.md for the reasoning and what was kept vs. cut
 
 ## Setup
 
@@ -246,8 +247,15 @@ agent-hq dispatch 0001
 # Actually run it
 agent-hq dispatch 0001 --run
 
-# Full ticket detail, including every dispatch attempt
+# Full ticket detail, including every dispatch attempt -- and whether
+# its process is actually still alive, not just what the record says
 agent-hq ticket-show 0001
+
+# Control a running dispatch from a second terminal -- real OS signals
+# against the real PID, no daemon involved (see ARCHITECTURE.md)
+agent-hq pause 0001-20260901T130307
+agent-hq resume 0001-20260901T130307
+agent-hq kill 0001-20260901T130307 --force
 
 # See active worktrees, remove one when you're done reviewing it
 agent-hq worktree-list
@@ -274,6 +282,7 @@ agent-hq/
 │   ├── memory.py             decisions/lessons/preferences -- git-tracked, simple search
 │   ├── worktree.py           Real git worktree create/list/remove
 │   ├── attempts.py           Durable dispatch attempt records
+│   ├── control.py            Real pause/resume/kill via OS signals -- no daemon
 │   ├── doctor.py             Checks what's actually installed + discloses verification tier
 │   ├── dispatch.py           Ties runtime + worktree + attempts together
 │   ├── runtimes/

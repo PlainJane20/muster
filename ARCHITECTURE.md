@@ -304,6 +304,78 @@ surfaced two more real bugs, both fixed before this feature shipped:
    is strictly more than exit-code-and-stdout proves, but it is not and
    was never meant to be a correctness check on *what* the tool did.
 
+## Why control.py is signals against a real PID, not a control-plane daemon
+
+A much larger spec was proposed for this project at one point: a
+persistent Node.js/Go control-plane daemon, a WebSocket/gRPC telemetry
+ingestion bus, a dashboard UI with embedded terminal emulation
+(xterm.js), resource-capped process supervision, an MCP interceptor
+middleware layer, and a file-lock registry with sub-100ms collision
+alerts. All real, legitimate things a bigger multi-agent orchestration
+product might have. None of it got built, and that was a deliberate
+scoping call, not a shortcut:
+
+- It's the opposite of this repo's actual selling point. Every other
+  design decision in this document leads back to "no server, no
+  database, read every line" -- Livery doesn't have one either, and this
+  project's entire positioning against it depends on staying that way.
+  A persistent daemon plus a dashboard UI is a different *kind* of
+  project, not a bigger version of this one.
+- It's a multi-week rebuild across a real backend service and a real
+  frontend app, not a session's worth of incremental work -- accepting
+  it silently would have meant quietly abandoning the project's own
+  stated scope ("lean but real," chosen explicitly early on) without
+  saying so.
+
+What was kept: the one piece of that spec with a real, honest answer
+that fits the existing architecture as-is. `dispatch()` already spawns
+the actual runtime subprocess (Claude Code, Aider, whatever the agent
+uses) and records its real PID in `DispatchAttempt.pid` -- that's been
+true since the very first version of this tool. Unix signals don't need
+a daemon to reach a PID; they work against a real OS process from any
+other process on the same machine, including a second, completely
+separate `agent-hq` invocation in another terminal. So `control.py` is
+exactly that: `agent-hq pause <attempt_id>` looks up the attempt's real
+PID and sends it a real `SIGSTOP`; `resume` sends `SIGCONT`; `kill` sends
+`SIGTERM` (or `SIGKILL` with `--force`). No process supervisor, no
+telemetry bus, no persistent service of any kind -- confirmed with a
+real `sleep` process in tests (checking `ps`'s own state field, not a
+guess) and again manually against a real ticket (0010) before shipping.
+
+One limitation stated plainly rather than glossed over: pausing the
+underlying process doesn't reach into the *original* `dispatch --run`
+invocation's Python call stack -- that call is still blocked inside
+`subprocess.communicate()`, waiting for the (now-paused) child to
+produce output or exit. Pausing just freezes the real work; the original
+foreground command keeps waiting the same way it always did, and only it
+still writes the final `succeeded`/`failed` status once the process
+resumes and actually finishes. `paused`/`terminated` are interim states
+set by a second, independent invocation acting on the durable attempt
+record -- a real capability, honestly scoped to what's possible without
+building the daemon that was asked for.
+
+What was explicitly *not* attempted, and why each is a real gap rather
+than an oversight:
+
+- **Resource limits (CPU/memory caps)**: implementable via
+  `resource.setrlimit` in a `preexec_fn`, but `RLIMIT_AS` (address space)
+  isn't reliably enforced on macOS the way it is on Linux -- the same
+  kind of platform inconsistency that already forced a workaround
+  elsewhere in this project (macOS lacking GNU `timeout`). Left out
+  rather than shipping a check that silently doesn't work on half the
+  machines this tool runs on.
+- **Streaming telemetry / log virtualization / a dashboard UI**: all
+  require a persistent process and a client to stream to -- the daemon
+  this project explicitly isn't building. `ticket-show` prints the real,
+  current state on demand instead; less real-time, but truthful about
+  what's actually running underneath it.
+- **File-lock collision detection across arbitrary paths**: worktrees
+  already solve the common case (each dispatch gets an isolated copy of
+  the repo). A real remaining gap is two *different* agents sharing the
+  same `cwd` with `use_worktree: false` running concurrently -- not
+  addressed here, and worth its own real implementation later rather
+  than a shallow version bolted onto this pass.
+
 ## Why worktrees are created before the run and left in place after
 
 Two decisions, for the same underlying reason -- isolation should be
