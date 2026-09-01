@@ -52,10 +52,12 @@ next two sections for exactly what that testing found.
     confirmed against the real `--help` output -- the original docs this
     adapter was built from turned out to be accurate. The only thing not
     confirmed is the *success* response shape, because cursor-agent has
-    no free tier and this environment has no `CURSOR_API_KEY`. (Gemini
-    CLI had the exact same shape of gap and got promoted to verified once
-    a real key was obtained -- Cursor's stayed open only because no
-    equivalent credential was available.)
+    no free tier and a `CURSOR_API_KEY` requires a paid subscription.
+    Gemini CLI had the exact same shape of gap and got promoted to
+    verified once a real (free) key was obtained; Cursor's was left
+    open by deliberate choice -- getting a paid Cursor subscription just
+    to finish this one adapter's verification wasn't judged worth it,
+    and that's stated here rather than left implicit.
   - LM Studio's cask genuinely installed (`brew install --cask
     lm-studio`, confirmed with `brew info`), but it's a GUI-first
     Electron app with no headless mode, and this environment has no
@@ -217,8 +219,12 @@ mode was also confirmed live: a plain non-zero exit with a plain-text
 stderr message (`Error: Authentication required...`), not a JSON error
 body -- so the adapter's existing generic non-zero-exit handling already
 covers it correctly. What's still unconfirmed is the *successful* JSON
-response shape, since cursor-agent has no free tier and this environment
-has no `CURSOR_API_KEY` to complete an authenticated run with.
+response shape, since cursor-agent has no free tier -- a `CURSOR_API_KEY`
+requires a paid subscription. Unlike Gemini CLI's gap, which closed once
+a free key was obtained, this one is a deliberate stop: not worth paying
+for a Cursor subscription solely to finish this adapter's verification.
+`cursor_agent` stays "documented, flags/errors confirmed live" on that
+basis -- disclosed as a cost decision, not a leftover TODO.
 
 **Gemini CLI**: installed via `npm install -g @google/gemini-cli`
 (v0.57.0). The *original* adapter's documented-only claims were

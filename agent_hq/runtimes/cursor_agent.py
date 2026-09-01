@@ -29,6 +29,19 @@ Still unconfirmed: the exact shape of a *successful* JSON response
 was possible here. `run()` below tries both known field names and falls
 back to raw stdout, same defensive shape as before this was ever run.
 
+This is a deliberate, permanent stopping point, not a pending TODO.
+Gemini CLI had the exact same shape of gap and closed it by getting a
+free Google AI Studio API key. Cursor's equivalent requires a paid
+Cursor subscription -- there's no free tier for `CURSOR_API_KEY` access.
+A decision was made not to pay for one just to complete this adapter's
+verification, so `cursor_agent` stays "documented, flags/errors confirmed
+live" rather than "verified" -- an honest, cost-based stopping point, not
+a gap left open because it wasn't tried hard enough. If a `CURSOR_API_KEY`
+becomes available later (e.g. a Cursor subscription obtained for other
+reasons), promoting this adapter is exactly the same process that
+promoted gemini_cli: run a real dispatch, fix whatever it surfaces, flip
+`RUNTIME_VERIFICATION["cursor_agent"]` to `"verified"`.
+
 `full` is intentionally NOT mapped to `--yolo` (confirmed live to be a
 real, working alias for `--force`) -- using the explicit `--force` name
 throughout keeps this file's intent readable without relying on Cursor's
