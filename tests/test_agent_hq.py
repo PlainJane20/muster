@@ -91,6 +91,15 @@ def test_ollama_aider_opencode_are_verified_not_documented():
         assert Agent(id=runtime, name=runtime, runtime=runtime, purpose="p").verification == "verified"
 
 
+def test_gemini_cli_is_verified_not_documented():
+    """Promoted from documented-only to verified after a real
+    GEMINI_API_KEY was obtained and a real authenticated dispatch through
+    this exact adapter returned a correct response -- not asserted from
+    the start, and not the same as Cursor, which is still blocked by a
+    missing credential."""
+    assert Agent(id="gemini_cli", name="g", runtime="gemini_cli", purpose="p").verification == "verified"
+
+
 # --- tickets ------------------------------------------------------------
 
 def test_ticket_lifecycle(workspace):
@@ -492,10 +501,13 @@ def test_gemini_cli_raises_with_real_error_shape():
             gemini_cli.run(prompt="hi")
 
 
-def test_gemini_cli_passes_skip_trust_with_any_approval_mode():
-    """--approval-mode silently downgrades to 'default' in an untrusted
-    directory unless --skip-trust is also passed -- a real, confirmed
-    gotcha, not a guess. Must never be sent alone."""
+def test_gemini_cli_always_passes_skip_trust():
+    """A real read_only dispatch (no --approval-mode sent at all) still
+    failed outright with exit 55 in an untrusted directory unless
+    --skip-trust was present -- confirmed live, not a guess. Gemini CLI
+    doesn't just downgrade a requested approval mode in that case, it
+    refuses to run headlessly at all. --skip-trust must be sent on every
+    invocation, independent of tool_access."""
     fake_process = MagicMock()
     fake_process.pid = 1
     fake_process.communicate.return_value = ('{"response": "ok"}', "")
@@ -503,7 +515,9 @@ def test_gemini_cli_passes_skip_trust_with_any_approval_mode():
 
     with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
         gemini_cli.run(prompt="hi", tool_access="read_only")
-    assert "--approval-mode" not in mock_popen.call_args[0][0]
+    args = mock_popen.call_args[0][0]
+    assert "--approval-mode" not in args
+    assert "--skip-trust" in args
 
     with patch("subprocess.Popen", return_value=fake_process) as mock_popen:
         gemini_cli.run(prompt="hi", tool_access="standard")

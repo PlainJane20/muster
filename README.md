@@ -21,9 +21,9 @@ Hire agents. File tickets. Dispatch to real, live runtimes — not canned script
 
 <div align="center">
 
-| 10 registered agents | 8 runtimes | 37 tests | New to AI agents? |
+| 10 registered agents | 8 runtimes | 38 tests | New to AI agents? |
 |:---:|:---:|:---:|:---:|
-| One markdown file each | 5 verified live, 3 documented (flags/errors confirmed live) | Fully offline, real git worktree tests | Run `agent-hq onboard` |
+| One markdown file each | 6 verified live, 2 documented (flags/errors confirmed live) | Fully offline, real git worktree tests | Run `agent-hq onboard` |
 
 </div>
 
@@ -51,7 +51,7 @@ agent-hq is a git-native platform for running a small team of AI agents locally:
 
 | | Livery | agent-hq |
 |---|---|---|
-| **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | **8 registered** (those 5 plus Gemini CLI, Aider, OpenCode) — **5 verified against real runs** (Claude Code, Codex, Ollama, Aider, OpenCode — the last three installed and tested live after the first pass shipped as "documented"). The other 3 (Cursor, Gemini CLI, LM Studio) had real install/CLI attempts too — each blocked from a full dispatch by something concrete and disclosed (missing credentials for the first two, no GUI session for the third), not left untested by choice |
+| **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | **8 registered** (those 5 plus Gemini CLI, Aider, OpenCode) — **6 verified against real runs** (Claude Code, Codex, Ollama, Aider, OpenCode, Gemini CLI — the last four installed and tested live, three with a real API key/local model, after the first pass shipped as "documented"). The other 2 (Cursor, LM Studio) had real install/CLI attempts too — each blocked from a full dispatch by something concrete and disclosed (a missing credential for Cursor, no GUI session for LM Studio), not left untested by choice |
 | **Worktree isolation** | Yes, via `--worktree` | Yes — real `git worktree` commands, tested against a real repo |
 | **Agent assignment** | Manual (`assignee` field) | Manual (`assign` command) — same model, this isn't the routing-intelligence project (see [switchboard](https://github.com/PlainJane20/switchboard) for that) |
 | **Memory** | `memory/{decisions,lessons,preferences}` | Same shape — decisions, lessons, preferences, git-tracked markdown |
@@ -73,7 +73,7 @@ Every runtime falls into exactly one of two buckets, and it's disclosed in three
 | **Aider** | ✅ Verified, with a real caveat found | Installed via pip, pointed at the local Ollama server — but a live edit dispatch revealed that "Applied edit" + exit 0 does **not** guarantee a persisted change (see [Real findings](#real-findings-from-building-and-testing-this)) |
 | **OpenCode** | ✅ Verified | Installed via npm, pointed at the local Ollama server — but only after finding its `--format json` parser was guessing the wrong field; fixed against a real captured response before shipping |
 | **Cursor** | 📄 Documented, flags confirmed live | Installed for real (the official install script) and every flag checked against the real `--help` — all correct on the first try. Blocked from a full dispatch only by the one thing that can't be worked around here: no free tier, and no `CURSOR_API_KEY` in this environment |
-| **Gemini CLI** | 📄 Documented, corrected live | The *original* docstring was itself wrong — built from a secondary summary that missed real flags (`--approval-mode`, `--include-directories`). Installing the real CLI surfaced and fixed that, plus a silent gotcha: `--approval-mode` quietly reverts to `default` in an untrusted directory unless `--skip-trust` is also passed. Blocked from a full dispatch only by missing `GEMINI_API_KEY`/Google auth |
+| **Gemini CLI** | ✅ Verified | The *original* docstring was itself wrong — built from a secondary summary that missed real flags (`--approval-mode`, `--include-directories`). Installing the real CLI surfaced and fixed that, plus two silent gotchas: `--approval-mode` reverts to `default` in an untrusted directory, and (more than first thought) `--skip-trust` is required unconditionally, not just alongside a requested approval mode. A real `GEMINI_API_KEY` and a real dispatch through the full pipeline (ticket → assign → dispatch) confirmed a correct response end-to-end |
 | **LM Studio** | 📄 Documented only, real structural blocker found | `brew install --cask lm-studio` genuinely installed it (v0.4.23) — but it's a GUI-first Electron app, and this environment has no window-server session for it to attach to. Launching it falls through to its embedded Node runtime's own `--help` instead of starting the app, so its CLI/server never bootstraps. Unlike Cursor/Gemini, this isn't a missing-credential gap — it needs an actual desktop session, not just more installing |
 
 ### Why the list stops at 8, when a lot more tools exist
@@ -113,8 +113,8 @@ flowchart TD
     WorktreeCheck -->|no| Shared["Run in shared cwd"]
     Worktree --> Runtime{"Which runtime?"}
     Shared --> Runtime
-    Runtime -->|"claude_code / codex /<br/>ollama / aider / opencode"| CC["Verified runtimes (5)"]
-    Runtime -->|"cursor_agent / gemini_cli /<br/>lm_studio"| Doc["Documented adapters (3)<br/>flags/errors confirmed live where possible"]
+    Runtime -->|"claude_code / codex / ollama /<br/>aider / opencode / gemini_cli"| CC["Verified runtimes (6)"]
+    Runtime -->|"cursor_agent / lm_studio"| Doc["Documented adapters (2)<br/>flags/errors confirmed live where possible"]
     CC --> Attempt[("DispatchAttempt<br/>pid, status, result")]
     Doc --> Attempt
     Attempt --> Ledger["close --summary<br/>-> ledger.md"]
@@ -128,7 +128,6 @@ Full design rationale — including the exact commands run to verify Claude Code
 
 - **A fresh `git init` with zero commits has no HEAD to branch a worktree off of.** The raw git error (`fatal: not a valid object name: 'HEAD'`) says nothing useful to a beginner. `create_worktree` now catches this specific case and explains it in plain language. Caught by actually dispatching to a real git-backed agent during development, not written defensively in advance.
 - **A "verified" adapter that only works under one auth configuration isn't actually verified.** Claude Code's `--bare` mode looked like the obvious default for scripted calls; it fails outright on a machine where managed settings pin OAuth login. The adapter omits it.
-- **Some official docs have real gaps.** Gemini CLI's headless-mode page doesn't document a working-directory flag or an auto-approval flag. Rather than guess, the adapter only implements `read_only` access and says exactly why in its own docstring.
 - **`--output-last-message <file>` beats parsing stdout.** A real `codex exec` run's stdout is full of banner and progress text ahead of the actual answer; the file argument gets written with just the final message.
 - **"Documented" isn't one confidence level -- some docs are gappier than others.** OpenCode's own docs describe its JSON output as "raw events" rather than a single object, so that parser is an explicit best-effort guess. Aider's gap turned out to be resolvable — see below.
 - **"Documented" can be upgraded to "verified" by just... installing the thing.** Ollama shipped as documented-only because no server was running during initial development. Installing it via Homebrew, pulling a model, and calling the real adapter took about five minutes and turned a disclosed guess into a proven fact. Not every documented adapter needs to stay that way forever.
@@ -139,7 +138,8 @@ Full design rationale — including the exact commands run to verify Claude Code
 - **An untested best-effort parser guessed the wrong field, and the fallback chain caught it.** OpenCode's docs describe its JSON output as "raw events" with no example. An initial guess assumed a top-level `text` key; a real captured run showed the actual text lives at `event["part"]["text"]`. The bug never surfaced as a crash — it silently fell through to the raw-stdout fallback — which is exactly the failure mode a fallback chain exists to catch quietly, but also exactly why it needed to be checked against real output before shipping, not trusted just because it didn't error.
 - **Even "documented" claims can be wrong if the documentation itself was second-hand.** Gemini CLI's original adapter was built from a *summary* of Google's docs, not the primary source — that summary missed real flags (`--approval-mode`, `--include-directories`) and led the original adapter to wrongly claim neither existed. Installing the real CLI and reading its actual `--help` output caught this. Lesson: "documented" is only as trustworthy as the documentation actually consulted.
 - **A flag can exist, be spelled correctly, and still silently do nothing.** Gemini CLI's `--approval-mode auto_edit` in an untrusted directory printed a warning and quietly reverted to `default` — same class of bug as a flag being ignored outright, just harder to notice because the command still exits 0. `--skip-trust` must be passed alongside it, confirmed by triggering the silent downgrade directly, not inferred from docs.
-- **A GUI-only tool is a different kind of "can't verify" than a missing API key.** LM Studio really did install via `brew install --cask lm-studio` — but this environment has no window-server session, so the app can never complete first-run setup; attempting to launch it falls through to its embedded Electron/Node runtime's own bare `--help` output instead of starting anything. Cursor and Gemini CLI are one credential away from a full dispatch; LM Studio needs an actual desktop session, and no amount of further installing changes that here.
+- **The same flag turned out to be needed even more than that first finding suggested.** Getting a real `GEMINI_API_KEY` and running an actual authenticated dispatch showed `--skip-trust` isn't just needed alongside a *requested* approval mode — Gemini CLI refuses to run at all in an untrusted directory (exit 55), even at `read_only`, which sends no `--approval-mode` flag whatsoever. The adapter now sends `--skip-trust` unconditionally. Caught only by actually getting a key and dispatching for real, not by re-reading `--help` more carefully.
+- **A GUI-only tool is a different kind of "can't verify" than a missing API key.** LM Studio really did install via `brew install --cask lm-studio` — but this environment has no window-server session, so the app can never complete first-run setup; attempting to launch it falls through to its embedded Electron/Node runtime's own bare `--help` output instead of starting anything. Cursor is one credential away from a full dispatch (Gemini CLI got that credential and is now fully verified); LM Studio needs an actual desktop session, and no amount of further installing changes that here.
 
 Worktree isolation, proven the same way — not asserted. A real dispatch to a file-editing agent (`tool_access: standard`) created `worktree-proof.txt`, and afterward:
 
@@ -158,14 +158,14 @@ The file exists only in the isolated worktree. The main tree's only change is th
 
 ## What's next
 
-- [x] Five verified live runtimes (Claude Code, Codex, Ollama, Aider, OpenCode); three documented with real install/CLI attempts (Cursor, Gemini CLI, LM Studio)
+- [x] Six verified live runtimes (Claude Code, Codex, Ollama, Aider, OpenCode, Gemini CLI); two documented with real install/CLI attempts (Cursor, LM Studio)
 - [x] Real git worktree isolation, tested against a real repo, including a real (imperfect) file-editing dispatch through the full pipeline
 - [x] Generalized memory (decisions, lessons, preferences)
 - [x] Beginner-friendly onboarding (`onboard`, `doctor`, interactive `agent-hire`)
 - [ ] Verifying dispatch success against the actual filesystem state, not just exit code + stdout — Aider's live test showed these can disagree; nothing in `dispatch()` cross-checks this yet
 - [ ] Automatic routing — this tool assigns manually, on purpose; see [switchboard](https://github.com/PlainJane20/switchboard) for the automatic-routing version of this idea
 - [ ] Scheduling, Talk mode, Walkie-Talkie debate, Telegram-style notifications — all real ideas, not built in this version
-- [ ] Getting Cursor or Gemini CLI to fully "verified" — every flag and error shape is now confirmed live; the only remaining gap is an authenticated success response, which needs a `CURSOR_API_KEY`/Cursor account or a `GEMINI_API_KEY`/Google auth this environment doesn't have
+- [ ] Getting Cursor to fully "verified" — every flag and error shape is now confirmed live; the only remaining gap is an authenticated success response, which needs a `CURSOR_API_KEY`/Cursor account this environment doesn't have (Gemini CLI had the same gap and got a real `GEMINI_API_KEY` to close it)
 - [ ] Getting LM Studio to "verified" at all — needs a machine with a real interactive desktop session, not just another install attempt
 
 ## Setup
@@ -238,8 +238,8 @@ agent-hq/
 │   │   ├── ollama.py         VERIFIED (installed + tested live after shipping as documented)
 │   │   ├── aider.py          VERIFIED, with a real caveat -- "succeeded" doesn't guarantee a persisted change
 │   │   ├── opencode.py       VERIFIED (installed + tested live; fixed a real parser bug first)
+│   │   ├── gemini_cli.py     VERIFIED (real GEMINI_API_KEY, real dispatch through the full pipeline)
 │   │   ├── cursor_agent.py   documented -- flags/error shape confirmed live, blocked by missing API key
-│   │   ├── gemini_cli.py     documented -- flags/error shape confirmed live, blocked by missing API key
 │   │   └── lm_studio.py      documented -- real install attempted, blocked by no GUI session in this environment
 │   └── cli.py                `agent-hq <command>`, including the onboard wizard
 ├── agents/                   Ten example agents across 8 runtimes (two each on claude_code and aider)

@@ -9,7 +9,8 @@ tags:
 risk_tier: low
 ---
 
-A Gemini CLI session for drafting and research questions. Documented-only
-adapter -- Gemini CLI wasn't installed in the environment this was built
-in, so only read_only is implemented (no documented auto-approval flag
-exists for unattended tool use). See runtimes/gemini_cli.py.
+A Gemini CLI session for drafting and research questions. Verified live:
+installed the real CLI, confirmed its actual flags/error shapes against
+real invocations, and completed a real authenticated dispatch with a
+personal `GEMINI_API_KEY`. See runtimes/gemini_cli.py for exactly what
+was checked.

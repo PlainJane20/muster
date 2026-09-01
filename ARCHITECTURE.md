@@ -18,44 +18,44 @@ map perfectly onto three tiers. The benefit is that "how much can this
 agent actually do" is one honest question with one honest answer,
 independent of which tool answers it.
 
-## Why five runtimes are "verified" and three are "documented," and why that distinction is load-bearing
+## Why six runtimes are "verified" and two are "documented," and why that distinction is load-bearing
 
 It would have been easy to build eight adapters from eight sets of
 official docs and claim "8 runtimes." Instead, verification started at
 two (claude_code, codex -- both installed in the original development
-environment) and grew to five by actually installing three more
-(ollama, aider, opencode) and running real dispatches against them,
+environment) and grew to six by actually installing four more (ollama,
+aider, opencode, gemini_cli) and running real dispatches against them,
 rather than leaving "documented" as a permanent label for a tool that was
-simply never tried. The remaining three (cursor_agent, gemini_cli,
-lm_studio) each got a real install/CLI-verification attempt too, and each
-hit a different, disclosed, concrete wall short of a full dispatch --
-not "never tried," just "tried and blocked by something specific." See
-the next two sections for exactly what that testing found.
+simply never tried. The one remaining fully-blocked runtime beyond that
+(cursor_agent) got a real install/CLI-verification attempt too, and hit a
+disclosed, concrete wall short of a full dispatch -- not "never tried,"
+just "tried and blocked by something specific." lm_studio's wall is
+different in kind, not credentials-shaped at all -- see below. See the
+next two sections for exactly what that testing found.
 
-- **claude_code**, **codex**, **ollama**, **aider**, **opencode**: every
-  flag was checked against that tool's own `--help`/official reference,
-  and each was proven with a real invocation before being trusted.
-  `claude_code`'s JSON parser was built from one real `claude -p ...
-  --output-format json` response. `codex`'s `--output-last-message`
-  pattern was chosen because a real run showed stdout is full of banner
-  text ahead of the actual answer. `ollama`, `aider`, and `opencode` were
-  each verified after initially shipping as documented-only -- all three
-  required actually installing the tool, not just reading about it.
-- **cursor_agent**, **gemini_cli**, **lm_studio**: real install attempts
-  were made for all three, and the gaps that remain differ in kind, not
-  just degree:
+- **claude_code**, **codex**, **ollama**, **aider**, **opencode**,
+  **gemini_cli**: every flag was checked against that tool's own
+  `--help`/official reference, and each was proven with a real invocation
+  before being trusted. `claude_code`'s JSON parser was built from one
+  real `claude -p ... --output-format json` response. `codex`'s
+  `--output-last-message` pattern was chosen because a real run showed
+  stdout is full of banner text ahead of the actual answer. `ollama`,
+  `aider`, `opencode`, and `gemini_cli` were each verified after initially
+  shipping as documented-only -- all four required actually installing
+  the tool, and `gemini_cli` additionally required getting a real
+  `GEMINI_API_KEY` and completing a real authenticated dispatch through
+  the full ticket -> assign -> dispatch pipeline before it could be
+  trusted, not just the tool being installed.
+- **cursor_agent**, **lm_studio**: real install attempts were made for
+  both, and the gaps that remain differ in kind from each other:
   - Cursor CLI is installed and every flag this adapter uses was
     confirmed against the real `--help` output -- the original docs this
     adapter was built from turned out to be accurate. The only thing not
     confirmed is the *success* response shape, because cursor-agent has
-    no free tier and this environment has no `CURSOR_API_KEY`.
-  - Gemini CLI's original docstring was itself built from a secondary
-    summary that missed real flags (`--approval-mode`,
-    `--include-directories`); installing the real CLI found and fixed
-    that, plus a silent gotcha (`--approval-mode` reverts to `default`
-    unless `--skip-trust` is also passed). The only thing not confirmed
-    is the success response shape, because this environment has no
-    `GEMINI_API_KEY`/Google auth.
+    no free tier and this environment has no `CURSOR_API_KEY`. (Gemini
+    CLI had the exact same shape of gap and got promoted to verified once
+    a real key was obtained -- Cursor's stayed open only because no
+    equivalent credential was available.)
   - LM Studio's cask genuinely installed (`brew install --cask
     lm-studio`, confirmed with `brew info`), but it's a GUI-first
     Electron app with no headless mode, and this environment has no
@@ -72,7 +72,7 @@ exercised, and would hide that some documented adapters are gappier than
 others. That's the same failure mode this whole portfolio has been built
 to avoid since the very first comparison to Livery: a "5 adapters" claim
 that sounds complete while being partly untested is worse than an honest
-"5 verified, 3 not, and here's specifically why" claim that's actually true.
+"6 verified, 2 not, and here's specifically why" claim that's actually true.
 
 ## Why Gemini CLI's tool_access mapping changed after real testing
 
@@ -85,13 +85,44 @@ Installing the real CLI and reading its actual `--help` output showed
 that reasoning was built on incomplete information: `--approval-mode
 {default,auto_edit,yolo,plan}` and `--include-directories` are both real,
 documented-in-`--help` flags. The adapter now maps `standard` to
-`--approval-mode auto_edit` and `full` to `--approval-mode yolo`, always
-paired with `--skip-trust` (without which the approval mode silently
-reverts to `default` in an untrusted directory -- found by triggering
-that exact silent downgrade live, not inferred from docs). The lesson
-generalizes past this one adapter: a documented-only claim is only as
-good as the documentation actually consulted, and a summary of a doc is
-not the doc.
+`--approval-mode auto_edit` and `full` to `--approval-mode yolo`.
+
+That still undersold the actual behavior, and a second round of testing
+-- this time with a real `GEMINI_API_KEY`, not just a live but
+unauthenticated CLI -- corrected it further: `--skip-trust` isn't only
+needed *alongside* a non-default approval mode to stop it silently
+reverting to `default`. It's needed unconditionally. A real dispatch at
+`read_only` (which sends no `--approval-mode` flag at all) still failed
+outright with exit 55 and a plain-text refusal ("Gemini CLI is not
+running in a trusted directory") -- Gemini CLI won't run headlessly in an
+untrusted directory at all, regardless of which approval mode was
+requested or whether one was requested. The adapter now sends
+`--skip-trust` on every invocation. The lesson generalizes past this one
+adapter, twice over: a documented-only claim is only as good as the
+documentation actually consulted (a summary of a doc is not the doc), and
+even a "confirmed live" claim can still be incomplete if it was only
+confirmed up to the point testing was able to reach -- getting the actual
+credential to go one step further surfaced a real gap the earlier,
+unauthenticated testing pass couldn't have found.
+
+## What actually happened when a real GEMINI_API_KEY was obtained
+
+Every other Gemini CLI finding up to this point came from installing and
+invoking the CLI without a working credential -- enough to confirm flags,
+error shapes, and the trust-related failure modes, but not enough to
+prove a real dispatch could complete successfully. Getting an actual
+`GEMINI_API_KEY` from Google AI Studio (a real personal account, a real
+project, a real generated key) and re-running the same `read_only`
+dispatch immediately hit the `--skip-trust`-is-unconditional bug above --
+which only became visible *because* authentication succeeded far enough
+to reach that check. Fixing it and rerunning produced a correct response
+("hello world" for a prompt asking for exactly that), both through the
+raw adapter function directly and through the full CLI pipeline (a real
+ticket, assigned to a real agent, dispatched with `--run`, closed with an
+honest summary). `gemini_cli` moved from "documented, corrected live" to
+fully verified on the strength of that -- the same bar `ollama`, `aider`,
+and `opencode` were held to, not a lower one because it took two rounds
+of testing to get there.
 
 ## What actually happened when Ollama and Aider were installed for real
 
@@ -190,11 +221,15 @@ response shape, since cursor-agent has no free tier and this environment
 has no `CURSOR_API_KEY` to complete an authenticated run with.
 
 **Gemini CLI**: installed via `npm install -g @google/gemini-cli`
-(v0.57.0). Covered in detail in the section above -- the short version is
-that the *original* adapter's documented-only claims were themselves
-built on an incomplete secondary source, and installing the real CLI
-caught that. What's still unconfirmed, same shape as Cursor, is the
-successful response body, blocked by missing `GEMINI_API_KEY`/Google auth.
+(v0.57.0). The *original* adapter's documented-only claims were
+themselves built on an incomplete secondary source, and installing the
+real CLI caught that. This one didn't stay in the "flags confirmed,
+success shape unconfirmed" state Cursor is still in -- a real
+`GEMINI_API_KEY` was obtained afterward and used to complete an actual
+authenticated dispatch, which surfaced one more real bug
+(`--skip-trust`'s unconditional requirement) before finally succeeding.
+See the two sections above for the full detail; `gemini_cli` is now fully
+verified, not just "confirmed live short of a credential."
 
 **LM Studio**: `brew install --cask lm-studio` genuinely installed it
 (v0.4.23, confirmed via `brew info lm-studio`) -- but LM Studio is a
@@ -207,11 +242,12 @@ instead of ever starting the app -- confirmed by literally getting Node's
 usage text back as the result. Because the app never completes first-run
 setup, `~/.lmstudio` (where its `lms` CLI and local inference server
 would live) is never created. This is a categorically different blocker
-than Cursor's or Gemini's: those two are one API key away from a full
-dispatch; LM Studio needs an actual desktop session, which no amount of
-further installing in a CLI-only environment produces. It stays
-documented-only, and the adapter's docstring says exactly why, rather
-than a generic "not installed" note.
+than Cursor's: Cursor is one API key away from a full dispatch (Gemini
+CLI had the identical gap and closed it once a key was obtained); LM
+Studio needs an actual desktop session, which no amount of further
+installing in a CLI-only environment produces. It stays documented-only,
+and the adapter's docstring says exactly why, rather than a generic "not
+installed" note.
 
 ## Why worktrees are created before the run and left in place after
 
@@ -269,14 +305,18 @@ Livery has more of everything that isn't runtime verification: 5 adapters
 all presumably exercised in real use, scheduling, Talk, Walkie-Talkie,
 Telegram, and actual production mileage. agent-hq's answer isn't "we did
 all of that too" -- it's two things done and proven (worktree isolation,
-five genuinely verified live runtimes, two of which surfaced real bugs
+six genuinely verified live runtimes, three of which surfaced real bugs
 along the way -- Aider's "reported success doesn't mean it happened,"
-OpenCode's silently-wrong parser) plus an honest accounting of everything
-that's documented-only or not attempted at all, including *why* each
-remaining gap exists (missing credentials for two runtimes, no GUI
-session for a third -- not "didn't get around to it" for any of them). A
-shorter, truthful feature list is worth more than a longer one with gaps
-papered over -- which is the same principle this portfolio's very first
-comparison to Livery was built on, applied here to a bigger, riskier
-build instead of a narrow one, and applied again, twice, mid-build, each
-time "documented" was questioned rather than taken as a permanent label.
+OpenCode's silently-wrong parser, Gemini CLI's unconditional
+`--skip-trust` requirement, the last of those only found *after* getting
+a real API key and pushing testing one step past where it had stopped)
+plus an honest accounting of everything that's documented-only or not
+attempted at all, including *why* each remaining gap exists (a missing
+credential for Cursor, no GUI session for LM Studio -- not "didn't get
+around to it" for either). A shorter, truthful feature list is worth more
+than a longer one with gaps papered over -- which is the same principle
+this portfolio's very first comparison to Livery was built on, applied
+here to a bigger, riskier build instead of a narrow one, and applied
+again, three times over, mid-build, each time "documented" (or even
+"verified short of a credential") was questioned rather than taken as a
+permanent label.

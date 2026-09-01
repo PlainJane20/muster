@@ -1,13 +1,13 @@
-"""DOCUMENTED, PARTIALLY VERIFIED: Gemini CLI (Google).
+"""VERIFIED runtime: Gemini CLI (Google).
 
-Installed for real (`npm install -g @google/gemini-cli`, v0.57.0) and its
-real CLI behavior checked against `--help` and actual invocations -- but
-never completed an authenticated dispatch (no Google account/API key
-available in this environment), so the *success* response shape below is
-still the original documented assumption, not a confirmed one. Everything
-else in this docstring is checked, not guessed.
+Installed for real (`npm install -g @google/gemini-cli`, v0.57.0), every
+flag checked against real `--help` output and real invocations, and now
+proven end-to-end with a real authenticated dispatch: a personal
+`GEMINI_API_KEY` (created in Google AI Studio) plus a real `gemini -p ...`
+call through this exact adapter returned the correct response. Promoted
+from documented-only after that -- not asserted from the start.
 
-Three real corrections to the original documented-only version of this
+Four real corrections to the original documented-only version of this
 adapter, found only by actually installing and running it:
 
 1. **A working-directory flag and an auto-approval flag both exist.** The
@@ -34,6 +34,16 @@ adapter, found only by actually installing and running it:
    (0/1/42/53) as exhaustive. This adapter parses the JSON body for the
    real error message on any non-zero exit rather than trusting a fixed
    code-to-meaning lookup.
+4. **`--skip-trust` is required unconditionally, not just alongside a
+   non-default approval mode.** A real dispatch at `read_only` -- which
+   sends no `--approval-mode` flag at all -- still failed outright with
+   exit 55 and a plain-text stderr message ("Gemini CLI is not running in
+   a trusted directory... use `--skip-trust`..."). The earlier finding
+   (2, above) undersold the actual behavior: an untrusted directory
+   doesn't just silently downgrade a *requested* approval mode, it blocks
+   headless execution entirely regardless of which mode was requested.
+   This adapter now sends `--skip-trust` on every invocation, not
+   conditionally on `tool_access`.
 
 `full` maps to `--approval-mode yolo` (Google's own name for
 "auto-approve everything") rather than a safer default, on the same basis
@@ -68,10 +78,14 @@ def run(
     pid_callback=None,
 ) -> RuntimeResult:
     full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-    cmd = ["gemini", "-p", full_prompt, "--output-format", "json"]
+    # --skip-trust is required unconditionally, not just for standard/full:
+    # Gemini CLI refuses to run *at all* in an untrusted directory (exit 55)
+    # in headless mode, even at the default read_only approval mode with no
+    # --approval-mode flag sent. See module docstring, finding 4.
+    cmd = ["gemini", "-p", full_prompt, "--output-format", "json", "--skip-trust"]
     approval_mode = _TOOL_ACCESS_TO_APPROVAL_MODE[tool_access]
     if approval_mode:
-        cmd += ["--approval-mode", approval_mode, "--skip-trust"]
+        cmd += ["--approval-mode", approval_mode]
     if model:
         cmd += ["--model", model]
 
