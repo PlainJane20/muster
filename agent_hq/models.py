@@ -116,6 +116,19 @@ class DispatchAttempt(BaseModel):
     result_text: Optional[str] = None
     session_id: Optional[str] = None
     cost_usd: Optional[float] = None
+    filesystem_verified: Optional[bool] = Field(
+        default=None,
+        description="Only set for a succeeded attempt with a worktree and "
+        "standard/full tool_access. True: a new commit or uncommitted diff "
+        "was actually found in the worktree -- proof *something* changed, "
+        "not proof the *requested* change is what happened (a real "
+        "dispatch once committed a correctly-detected but wrong change: a "
+        "new file literally named after the requested text). False: the "
+        "tool reported success but nothing in the worktree changed -- a "
+        "real, confirmed failure mode (see aider.py). None: not "
+        "applicable (read_only, no worktree, or the attempt didn't "
+        "succeed) or not checkable.",
+    )
 
 
 class Ticket(BaseModel):

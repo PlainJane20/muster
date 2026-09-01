@@ -8,6 +8,12 @@ runs in its own git worktree (see worktree.py) instead of the shared
 directory -- created before the run, deliberately left in place after
 (not auto-removed) so a human can inspect or merge what the agent did.
 `agent-hq worktree remove` cleans it up explicitly.
+
+For standard/full dispatches with a worktree, a successful attempt also
+gets its `filesystem_verified` field cross-checked against the worktree's
+actual git state -- see worktree.has_real_changes and its docstring for
+why this exists (a real, confirmed case of a tool reporting success on a
+change that never actually happened).
 """
 
 from __future__ import annotations
@@ -59,6 +65,7 @@ def dispatch(agent: Agent, ticket: Ticket, run: bool = False) -> Optional[Dispat
 
     attempt_holder = {}
     worktree_path: Optional[Path] = None
+    base_commit: Optional[str] = None
 
     # Worktree creation can fail for real reasons (a repo with no commits
     # yet -- see ARCHITECTURE.md) and used to crash with a raw traceback
@@ -69,6 +76,11 @@ def dispatch(agent: Agent, ticket: Ticket, run: bool = False) -> Optional[Dispat
     try:
         if agent.cwd and agent.use_worktree and worktree_mod.is_git_repo(Path(agent.cwd)):
             worktree_path = worktree_mod.create_worktree(Path(agent.cwd), ticket.id)
+            # Recorded before the runtime ever touches the worktree, so
+            # the post-run check below has an honest "before" to compare
+            # against -- not the worktree's state after the agent already
+            # ran, which would always show zero drift.
+            base_commit = worktree_mod.current_head(worktree_path)
     except (RuntimeError, ValueError) as e:
         attempt = attempts_mod.record_attempt(
             ticket_id=ticket.id, agent_id=agent.id, prompt=prompt, worktree_path=None, pid=None,
@@ -102,11 +114,31 @@ def dispatch(agent: Agent, ticket: Ticket, run: bool = False) -> Optional[Dispat
         return attempt
 
     status = "failed" if result.is_error else "succeeded"
+
+    # The check this whole file exists to make honest: a runtime exiting
+    # 0 and reporting "success" doesn't mean the change it claims to have
+    # made is actually in the worktree -- a real, confirmed failure mode
+    # (see aider.py's docstring, and ARCHITECTURE.md). Only meaningful
+    # when tool_access could have produced a change at all; read_only
+    # dispatches are supposed to leave the worktree untouched.
+    filesystem_verified: Optional[bool] = None
+    if status == "succeeded" and worktree_path and agent.tool_access in ("standard", "full"):
+        filesystem_verified = worktree_mod.has_real_changes(worktree_path, base_commit)
+
     attempt = attempts_mod.update_attempt(
         attempt_holder["attempt"].id, status=status, returncode=result.returncode,
         result_text=result.result_text, session_id=result.session_id, cost_usd=result.cost_usd,
+        filesystem_verified=filesystem_verified,
     )
     print(f"Attempt {attempt.id}: {status}.\n\n{result.result_text}")
+    if filesystem_verified is False:
+        print(
+            "\nWARNING: the tool reported success, but no new commit or "
+            "uncommitted change was found in the worktree. 'succeeded' "
+            "means the tool didn't error -- it doesn't prove the "
+            "requested change actually happened. Check the worktree "
+            "yourself before trusting this attempt."
+        )
     if worktree_path:
         print(f"\nWorktree left in place for review: {worktree_path}")
         print(f"Remove it with: agent-hq worktree remove {ticket.id}")

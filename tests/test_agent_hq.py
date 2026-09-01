@@ -215,6 +215,56 @@ def test_list_worktrees(git_repo, tmp_path):
     assert wt_path.resolve() in [p.resolve() for p in listed]
 
 
+def test_has_real_changes_detects_a_new_commit(git_repo, tmp_path):
+    wt_path = worktree_mod.create_worktree(git_repo, "0001", worktrees_root=tmp_path / "worktrees")
+    base = worktree_mod.current_head(wt_path)
+
+    (wt_path / "new.txt").write_text("real change")
+    subprocess.run(["git", "add", "."], cwd=wt_path, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "agent edit"], cwd=wt_path, check=True)
+
+    assert worktree_mod.has_real_changes(wt_path, base) is True
+
+
+def test_has_real_changes_detects_uncommitted_edits(git_repo, tmp_path):
+    wt_path = worktree_mod.create_worktree(git_repo, "0001", worktrees_root=tmp_path / "worktrees")
+    base = worktree_mod.current_head(wt_path)
+
+    (wt_path / "README.md").write_text("edited but never committed")
+
+    assert worktree_mod.has_real_changes(wt_path, base) is True
+
+
+def test_has_real_changes_is_false_when_nothing_changed(git_repo, tmp_path):
+    """The exact scenario this feature exists to catch: a tool reports
+    success but the worktree is untouched -- see aider.py's docstring.
+    Covered end-to-end at the dispatch level too, in
+    test_dispatch_flags_reported_success_with_no_real_change below."""
+    wt_path = worktree_mod.create_worktree(git_repo, "0001", worktrees_root=tmp_path / "worktrees")
+    base = worktree_mod.current_head(wt_path)
+    assert worktree_mod.has_real_changes(wt_path, base) is False
+
+
+def test_has_real_changes_returns_none_when_base_commit_unknown(git_repo, tmp_path):
+    wt_path = worktree_mod.create_worktree(git_repo, "0001", worktrees_root=tmp_path / "worktrees")
+    assert worktree_mod.has_real_changes(wt_path, None) is None
+
+
+def test_has_real_changes_ignores_dotfile_only_bookkeeping(git_repo, tmp_path):
+    """The exact real bug found on the first live dispatch this feature
+    ran against: Aider writes its own `.gitignore` as housekeeping
+    ('Added .aider* to .gitignore'), which is an uncommitted change but
+    not the requested one. A dotfile-only diff must not count as a real
+    change, or this check would have missed the discrepancy it exists to
+    catch."""
+    wt_path = worktree_mod.create_worktree(git_repo, "0001", worktrees_root=tmp_path / "worktrees")
+    base = worktree_mod.current_head(wt_path)
+
+    (wt_path / ".gitignore").write_text(".aider*\n")
+
+    assert worktree_mod.has_real_changes(wt_path, base) is False
+
+
 # --- runtime adapters ---------------------------------------------------
 
 REAL_CLAUDE_JSON = (
@@ -355,6 +405,73 @@ def test_dispatch_creates_worktree_for_git_backed_agent(git_repo, monkeypatch, t
     assert attempt.worktree_path is not None
     assert seen_cwd["cwd"] == attempt.worktree_path
     assert Path(attempt.worktree_path).exists()  # left in place, not auto-removed
+
+
+def test_dispatch_flags_reported_success_with_no_real_change(capsys, git_repo, monkeypatch, tmp_path):
+    """The exact discrepancy a real Aider dispatch surfaced: exit 0 and
+    'succeeded' with nothing actually changed in the worktree. dispatch()
+    must catch this itself, not rely on a human noticing."""
+    monkeypatch.chdir(tmp_path)
+    agent = Agent(id="a", name="A", runtime="claude_code", purpose="p",
+                  cwd=str(git_repo), use_worktree=True, tool_access="standard")
+    ticket = tickets.new_ticket(title="T")
+
+    fake_result = RuntimeResult(is_error=False, result_text="Applied edit", returncode=0, pid=1)
+
+    def fake_run(*, prompt, cwd, tool_access, model, pid_callback=None, **kw):
+        if pid_callback:
+            pid_callback(1)
+        return fake_result  # note: never actually touches the worktree
+
+    with patch.object(dispatch_mod.claude_code, "run", side_effect=fake_run):
+        attempt = dispatch_mod.dispatch(agent, ticket, run=True)
+
+    assert attempt.status == "succeeded"
+    assert attempt.filesystem_verified is False
+    assert "WARNING" in capsys.readouterr().out
+
+
+def test_dispatch_confirms_a_real_change(capsys, git_repo, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    agent = Agent(id="a", name="A", runtime="claude_code", purpose="p",
+                  cwd=str(git_repo), use_worktree=True, tool_access="standard")
+    ticket = tickets.new_ticket(title="T")
+
+    fake_result = RuntimeResult(is_error=False, result_text="Applied edit", returncode=0, pid=1)
+
+    def fake_run(*, prompt, cwd, tool_access, model, pid_callback=None, **kw):
+        (Path(cwd) / "real-edit.txt").write_text("the agent actually did this")
+        if pid_callback:
+            pid_callback(1)
+        return fake_result
+
+    with patch.object(dispatch_mod.claude_code, "run", side_effect=fake_run):
+        attempt = dispatch_mod.dispatch(agent, ticket, run=True)
+
+    assert attempt.filesystem_verified is True
+    assert "WARNING" not in capsys.readouterr().out
+
+
+def test_dispatch_skips_filesystem_check_for_read_only(git_repo, monkeypatch, tmp_path):
+    """read_only dispatches are supposed to leave the worktree untouched --
+    flagging that as a discrepancy would be a false positive, not a real
+    finding. filesystem_verified should stay None (not checked)."""
+    monkeypatch.chdir(tmp_path)
+    agent = Agent(id="a", name="A", runtime="claude_code", purpose="p",
+                  cwd=str(git_repo), use_worktree=True, tool_access="read_only")
+    ticket = tickets.new_ticket(title="T")
+
+    fake_result = RuntimeResult(is_error=False, result_text="answer", returncode=0, pid=1)
+
+    def fake_run(*, prompt, cwd, tool_access, model, pid_callback=None, **kw):
+        if pid_callback:
+            pid_callback(1)
+        return fake_result
+
+    with patch.object(dispatch_mod.claude_code, "run", side_effect=fake_run):
+        attempt = dispatch_mod.dispatch(agent, ticket, run=True)
+
+    assert attempt.filesystem_verified is None
 
 
 # --- doctor ---------------------------------------------------------------

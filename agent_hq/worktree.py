@@ -76,6 +76,68 @@ def remove_worktree(repo_path: Path, worktree_path: Path, force: bool = False) -
         raise RuntimeError(f"git worktree remove failed: {result.stderr.strip()}")
 
 
+def current_head(repo_path: Path) -> Optional[str]:
+    """The commit a worktree is currently sitting on. Returns None if
+    that can't be determined (shouldn't happen for a worktree this module
+    just created, but a bare git failure here shouldn't crash a dispatch
+    over it -- see how dispatch.py treats a None here as "can't verify")."""
+    result = _run_git(["rev-parse", "HEAD"], cwd=repo_path)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def has_real_changes(worktree_path: Path, base_commit: Optional[str]) -> Optional[bool]:
+    """Did anything actually change in this worktree, independent of
+    whatever the runtime *said* it did? Checks two things a runtime
+    reporting success should have produced at least one of, if
+    tool_access allowed edits at all: a new commit past base_commit, or
+    uncommitted working-tree changes. Returns None (can't tell) if
+    base_commit is unknown rather than guessing.
+
+    This exists because of a real, confirmed finding: a live Aider
+    dispatch printed "Applied edit to README.md" and exited 0, but `git
+    log` in that worktree showed no new commit at all -- see aider.py's
+    docstring and ARCHITECTURE.md. A DispatchAttempt's `status:
+    succeeded` means the tool didn't error; this is what actually checks
+    whether the change it claimed happened is really there.
+
+    Uncommitted changes are filtered to non-dotfiles before counting --
+    see the inline comment below. An earlier version without that filter
+    got it wrong on the very first real dispatch it ran against: Aider's
+    own `.gitignore` housekeeping made this check say "yes, something
+    changed" while the actual requested README edit had never happened.
+
+    Important scope boundary, also found on a real dispatch: `True` means
+    *something* real changed, not that the *right* thing changed. A
+    follow-up dispatch asking Aider to append a line to README.md instead
+    committed a new, literally-named file called `Verified by agent-hq.`
+    with no content -- a real commit, correctly detected as True, but not
+    the requested edit. This function answers "did the tool actually do
+    something," which is strictly more than exit-code-and-stdout proves,
+    but it is not a correctness check on *what* it did."""
+    if base_commit is None:
+        return None
+    new_head = current_head(worktree_path)
+    if new_head is not None and new_head != base_commit:
+        return True
+    status = _run_git(["status", "--porcelain"], cwd=worktree_path)
+    for line in status.stdout.splitlines():
+        # Porcelain format is "XY path" (or "XY old -> new" for a
+        # rename) -- take whichever side is the real path.
+        path = line[3:].split(" -> ")[-1]
+        # Dotfiles are excluded on purpose: a real dispatch (Aider,
+        # standard tool_access) printed "Applied edit to README.md" and
+        # exited 0, but the *only* uncommitted change in the worktree
+        # afterward was a `.gitignore` Aider writes as its own
+        # housekeeping ("Added .aider* to .gitignore") -- README.md
+        # itself was untouched. Counting that as "a real change happened"
+        # would have hidden the exact discrepancy this check exists to
+        # catch. Tool-generated config/bookkeeping files are almost
+        # always dotfiles; the actual deliverable almost never is.
+        if not Path(path).name.startswith("."):
+            return True
+    return False
+
+
 def list_worktrees(repo_path: Path) -> list:
     result = _run_git(["worktree", "list", "--porcelain"], cwd=repo_path)
     if result.returncode != 0:

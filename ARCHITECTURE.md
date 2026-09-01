@@ -255,6 +255,55 @@ installing in a CLI-only environment produces. It stays documented-only,
 and the adapter's docstring says exactly why, rather than a generic "not
 installed" note.
 
+## Why filesystem_verified exists, and the two real bugs found building it
+
+Aider's live-testing round (above) surfaced the sharpest finding in this
+whole project: a `DispatchAttempt` with `status: succeeded` proves the
+tool didn't error, not that the change it claims to have made actually
+exists. That was left as a documented, unverified gap for a while --
+naming the problem precisely, but not fixing it. This closes it.
+
+The design: `dispatch()` now records the worktree's HEAD commit right
+after creating it, before the runtime touches anything (`base_commit` in
+`dispatch.py`). After a `standard`/`full` dispatch reports success,
+`worktree.has_real_changes(worktree_path, base_commit)` checks whether
+the worktree's HEAD moved past `base_commit`, or failing that, whether
+`git status --porcelain` shows any uncommitted change. The result lands
+on `DispatchAttempt.filesystem_verified` (`True`/`False`/`None`), and a
+`False` result prints an explicit warning at dispatch time instead of
+waiting for a human to notice via `git log` later, the way the original
+Aider discrepancy was found.
+
+`read_only` dispatches are exempt on purpose -- they're not supposed to
+change anything, so applying this check there would flag every single
+one as a false "problem." `filesystem_verified` stays `None` (not
+checked) for read_only, no worktree, or a failed attempt -- it's only
+meaningful where a change was actually possible.
+
+Building this against real dispatches (not just mocks) immediately
+surfaced two more real bugs, both fixed before this feature shipped:
+
+1. **Tool-generated housekeeping files initially counted as "a real
+   change."** The very first live dispatch this ran against was Aider,
+   reporting "Applied edit to README.md" and exiting 0 -- exactly the
+   original discrepancy. But the check *passed* it as `True` anyway: the
+   only uncommitted change in the worktree was Aider's own `.gitignore`,
+   written as housekeeping ("Added .aider* to .gitignore"), unrelated to
+   the requested edit. `has_real_changes` now filters uncommitted changes
+   to non-dotfiles before counting them -- confirmed by rerunning the
+   identical dispatch and watching the warning correctly appear once that
+   filter was in place.
+2. **A real, correctly-detected change can still be the wrong one.** A
+   follow-up live dispatch, asking Aider to append a line to README.md,
+   instead committed a new file literally named `Verified by agent-hq.`
+   with no content. `filesystem_verified` read `True` -- a real commit
+   did happen, so the check did its job -- but it wasn't the requested
+   change. This is now a stated scope boundary in both `worktree.py`'s
+   and `models.py`'s docstrings, not a false claim of correctness:
+   `filesystem_verified` answers "did the tool do something real," which
+   is strictly more than exit-code-and-stdout proves, but it is not and
+   was never meant to be a correctness check on *what* the tool did.
+
 ## Why worktrees are created before the run and left in place after
 
 Two decisions, for the same underlying reason -- isolation should be
