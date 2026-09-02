@@ -6,8 +6,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List
 
-from agent_hq import frontmatter
-from agent_hq.models import Agent
+from muster import frontmatter
+from muster.models import Agent
 
 DEFAULT_AGENTS_DIR = Path("agents")
 

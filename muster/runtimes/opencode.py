@@ -40,7 +40,7 @@ import json
 import subprocess
 from typing import Optional
 
-from agent_hq.models import RuntimeResult, ToolAccess
+from muster.models import RuntimeResult, ToolAccess
 
 
 def _best_effort_parse(stdout: str) -> str:

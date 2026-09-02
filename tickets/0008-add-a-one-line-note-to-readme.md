@@ -8,4 +8,4 @@ tags:
 assignee: aider-local
 ---
 
-Add a line to README.md that says exactly: "Verified by agent-hq."
+Add a line to README.md that says exactly: "Verified by muster."

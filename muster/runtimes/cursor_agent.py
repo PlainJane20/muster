@@ -55,7 +55,7 @@ import json
 import subprocess
 from typing import Optional
 
-from agent_hq.models import RuntimeResult, ToolAccess
+from muster.models import RuntimeResult, ToolAccess
 
 # --trust: "Trust the workspace without prompting (headless mode only)" --
 # the documented mechanism for running unattended at all. -f/--force

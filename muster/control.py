@@ -27,8 +27,8 @@ from __future__ import annotations
 import os
 import signal
 
-from agent_hq import attempts as attempts_mod
-from agent_hq.models import DispatchAttempt
+from muster import attempts as attempts_mod
+from muster.models import DispatchAttempt
 
 DEFAULT_ATTEMPTS_DIR = attempts_mod.DEFAULT_ATTEMPTS_DIR
 

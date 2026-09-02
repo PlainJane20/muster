@@ -65,7 +65,7 @@ next two sections for exactly what that testing found.
     credentials gap. See below.
 
 `Agent.verification` surfaces the verified/documented split on every
-agent, in `agent-hq agent-list`, and in `agent-hq doctor` -- but within
+agent, in `muster agent-list`, and in `muster doctor` -- but within
 "documented," the *specific* gap for each adapter lives in that adapter's
 own docstring, not flattened into one generic disclaimer. The alternative
 -- one flat "supported runtimes" list -- would let a documented-but-never-
@@ -161,7 +161,7 @@ things -- one non-bug, one real bug, and one finding sharper than either:
    generally, and the identical command then completed correctly in
    seconds. The adapter now passes `--map-tokens 0` unconditionally.
 3. **The sharpest finding: exit 0 and "Applied edit" don't mean the edit
-   happened.** A live dispatch through the *full* agent-hq pipeline
+   happened.** A live dispatch through the *full* muster pipeline
    (ticket → worktree → aider → local model, `tool_access: standard`)
    printed "Applied edit to README.md" and returned successfully. `git
    log` in that worktree afterward showed no new commit at all -- the
@@ -295,7 +295,7 @@ surfaced two more real bugs, both fixed before this feature shipped:
    filter was in place.
 2. **A real, correctly-detected change can still be the wrong one.** A
    follow-up live dispatch, asking Aider to append a line to README.md,
-   instead committed a new file literally named `Verified by agent-hq.`
+   instead committed a new file literally named `Verified by muster.`
    with no content. `filesystem_verified` read `True` -- a real commit
    did happen, so the check did its job -- but it wasn't the requested
    change. This is now a stated scope boundary in both `worktree.py`'s
@@ -334,8 +334,8 @@ uses) and records its real PID in `DispatchAttempt.pid` -- that's been
 true since the very first version of this tool. Unix signals don't need
 a daemon to reach a PID; they work against a real OS process from any
 other process on the same machine, including a second, completely
-separate `agent-hq` invocation in another terminal. So `control.py` is
-exactly that: `agent-hq pause <attempt_id>` looks up the attempt's real
+separate `muster` invocation in another terminal. So `control.py` is
+exactly that: `muster pause <attempt_id>` looks up the attempt's real
 PID and sends it a real `SIGSTOP`; `resume` sends `SIGCONT`; `kill` sends
 `SIGTERM` (or `SIGKILL` with `--force`). No process supervisor, no
 telemetry bus, no persistent service of any kind -- confirmed with a
@@ -400,7 +400,7 @@ inspectable, not just automatic:
 a real Claude Code agent. It failed:
 
 ```
-git worktree add failed: Preparing worktree (new branch 'agent-hq/0003-...')
+git worktree add failed: Preparing worktree (new branch 'muster/0003-...')
 fatal: not a valid object name: 'HEAD'
 ```
 
@@ -421,8 +421,8 @@ memory loop. Rebuilding that here would either duplicate it or force this
 project's ticket model to carry routing metadata it doesn't otherwise
 need. `assign` here is deliberately manual, matching Livery's own
 `assignee` field -- the two projects in this portfolio compose rather than
-overlap: switchboard could, in principle, decide *which* agent-hq agent a
-ticket goes to, while agent-hq handles the actual live dispatch and
+overlap: switchboard could, in principle, decide *which* muster agent a
+ticket goes to, while muster handles the actual live dispatch and
 worktree isolation. That composition isn't built, but the separation of
 concerns is deliberate, not an oversight.
 
@@ -430,7 +430,7 @@ concerns is deliberate, not an oversight.
 
 Livery has more of everything that isn't runtime verification: 5 adapters
 all presumably exercised in real use, scheduling, Talk, Walkie-Talkie,
-Telegram, and actual production mileage. agent-hq's answer isn't "we did
+Telegram, and actual production mileage. muster's answer isn't "we did
 all of that too" -- it's two things done and proven (worktree isolation,
 six genuinely verified live runtimes, three of which surfaced real bugs
 along the way -- Aider's "reported success doesn't mean it happened,"

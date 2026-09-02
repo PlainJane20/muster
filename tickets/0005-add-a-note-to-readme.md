@@ -8,4 +8,4 @@ tags:
 assignee: aider-local
 ---
 
-Append the exact line 'agent-hq dispatched this' to the end of README.md.
+Append the exact line 'muster dispatched this' to the end of README.md.

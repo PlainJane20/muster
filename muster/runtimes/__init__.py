@@ -1,5 +1,5 @@
 """Runtime adapters. Two verification tiers, disclosed per-adapter and
-surfaced by `agent-hq doctor` -- see models.RUNTIME_VERIFICATION.
+surfaced by `muster doctor` -- see models.RUNTIME_VERIFICATION.
 
 VERIFIED means: checked against the real installed CLI's --help output,
 and proven against at least one real invocation during development.

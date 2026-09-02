@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="docs/agent-hq-banner.svg" alt="agent-hq -- a git-native AI team you run locally" width="100%" />
+  <img src="docs/muster-banner.svg" alt="muster -- a git-native AI team you run locally" width="100%" />
 </p>
 
 <div align="center">
 
-# agent-hq
+# muster
 
 ### A git-native AI team you run locally
 
@@ -14,7 +14,7 @@ Hire agents. File tickets. Dispatch to real, live runtimes — not canned script
 [![6 Verified Runtimes](https://img.shields.io/badge/Runtimes-6_Verified_%2B_2_Documented-2a9d8f)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
 [![Status: Reference Implementation](https://img.shields.io/badge/status-reference%20implementation-6f42c1)](#whats-next)
-[![CI](https://github.com/PlainJane20/agent-hq/actions/workflows/ci.yml/badge.svg)](https://github.com/PlainJane20/agent-hq/actions/workflows/ci.yml)
+[![CI](https://github.com/PlainJane20/muster/actions/workflows/ci.yml/badge.svg)](https://github.com/PlainJane20/muster/actions/workflows/ci.yml)
 
 </div>
 
@@ -24,7 +24,7 @@ Hire agents. File tickets. Dispatch to real, live runtimes — not canned script
 
 | 12 registered agents | 8 runtimes | 51 tests | New to AI agents? |
 |:---:|:---:|:---:|:---:|
-| One markdown file each | 6 verified live, 2 documented (flags/errors confirmed live) | Fully offline, real git worktree tests | Run `agent-hq onboard` |
+| One markdown file each | 6 verified live, 2 documented (flags/errors confirmed live) | Fully offline, real git worktree tests | Run `muster onboard` |
 
 </div>
 
@@ -38,17 +38,17 @@ You don't need to already know what any of this means. Quick glossary:
 - **Runtime** — which underlying tool an agent uses (Claude Code, Codex, etc.).
 - **Worktree** — a private copy of a code repo so an agent's changes don't collide with anyone else's.
 
-Run `agent-hq onboard` and it walks you through all of this interactively — checks what's installed on your machine, and helps you register your first agent by answering a few questions, no file-editing required.
+Run `muster onboard` and it walks you through all of this interactively — checks what's installed on your machine, and helps you register your first agent by answering a few questions, no file-editing required.
 
 ## Overview
 
-agent-hq is a git-native platform for running a small team of AI agents locally: hire an agent (one markdown file), file a ticket, dispatch it for real. It's a positioned, honest competitor to [Livery](https://github.com/sohailmamdani/livery) — same core idea (agents and tickets as plain files, no database) — built independently, with its own tradeoffs stated plainly rather than glossed over.
+muster is a git-native platform for running a small team of AI agents locally: hire an agent (one markdown file), file a ticket, dispatch it for real. It's a positioned, honest competitor to [Livery](https://github.com/sohailmamdani/livery) — same core idea (agents and tickets as plain files, no database) — built independently, with its own tradeoffs stated plainly rather than glossed over.
 
 **Explore:** [Who it's for](#who-its-for) · [vs. Livery](#how-this-compares-to-livery) · [Verification](#what-verified-actually-means-here) · [How it works](#how-it-works) · [Architecture](#architecture) · [Setup](#setup) · [Usage](#usage)
 
 ### Why this exists
 
-Most "AI agent platform" projects either (a) claim to support a long list of tools without anyone having actually run half of them, or (b) hide how thin that list really is behind a database and a UI. agent-hq does neither: every runtime here is labeled verified or documented based on whether it was actually installed and dispatched against for real — not asserted — and the whole thing is a handful of Python files and markdown, no server, no database, so you can read every line that decides what happens to your machine.
+Most "AI agent platform" projects either (a) claim to support a long list of tools without anyone having actually run half of them, or (b) hide how thin that list really is behind a database and a UI. muster does neither: every runtime here is labeled verified or documented based on whether it was actually installed and dispatched against for real — not asserted — and the whole thing is a handful of Python files and markdown, no server, no database, so you can read every line that decides what happens to your machine.
 
 ### What it does
 
@@ -62,16 +62,16 @@ In one sentence: it's a single, consistent front door to a whole shelf of differ
 ### Who it's for
 
 - **Anyone juggling more than one AI coding tool** (Claude Code for one thing, Aider or a local Ollama model for another, occasionally Codex or Gemini) who's tired of relearning each one's CLI just to run a task — one `tool_access` dial and one ticket format cover all of them.
-- **Someone new to AI agents entirely** — `agent-hq onboard` is built for exactly this: no assumed vocabulary, checks what's actually installed on your machine, and walks you through registering your first agent by answering plain-English questions.
+- **Someone new to AI agents entirely** — `muster onboard` is built for exactly this: no assumed vocabulary, checks what's actually installed on your machine, and walks you through registering your first agent by answering plain-English questions.
 - **Anyone evaluating which AI CLI tools are actually worth trusting** — the verified/documented split, and the real bugs found while testing each one, are a more honest signal than any tool's own marketing page.
 - **Technical leads or PMs coordinating AI-assisted work across a small team**, who want a lightweight, git-native record of who (which agent) did what (which ticket) and whether it's actually verified to have worked — without standing up infrastructure for it.
 
 ### A real example, not a mockup
 
-This is an actual captured run — a real Aider dispatch, against a real local Ollama model, through the full pipeline below. It reported success. `agent-hq` caught that it wasn't true, live, without a human needing to notice:
+This is an actual captured run — a real Aider dispatch, against a real local Ollama model, through the full pipeline below. It reported success. `muster` caught that it wasn't true, live, without a human needing to notice:
 
 ```
-$ agent-hq dispatch 0008 --run
+$ muster dispatch 0008 --run
 WARNING: aider-local is a medium-risk agent (tool_access=standard). Running anyway because run=True.
 Dispatched (attempt 0008-20260901T111628, pid 38990). Waiting for it to finish...
 Attempt 0008-20260901T111628: succeeded.
@@ -82,8 +82,8 @@ WARNING: the tool reported success, but no new commit or uncommitted change was 
 'succeeded' means the tool didn't error -- it doesn't prove the requested change actually happened.
 Check the worktree yourself before trusting this attempt.
 
-Worktree left in place for review: .agent-hq/worktrees/0008-1788286588
-Remove it with: agent-hq worktree remove 0008
+Worktree left in place for review: .muster/worktrees/0008-1788286588
+Remove it with: muster worktree remove 0008
 ```
 
 That second warning is real code (`dispatch.py`'s `filesystem_verified` check), reacting to a real bug in Aider's own output, caught by comparing `git log`/`git status` in the worktree against what the tool claimed. See [Real findings](#real-findings-from-building-and-testing-this) for the two bugs found *while building that check itself*, and [ledger.md](ledger.md) (ticket 0008) for the closing summary written right after this exact run.
@@ -92,13 +92,13 @@ That second warning is real code (`dispatch.py`'s `filesystem_verified` check), 
 
 ## How this compares to Livery
 
-| | Livery | agent-hq |
+| | Livery | muster |
 |---|---|---|
 | **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | **8 registered** (those 5 plus Gemini CLI, Aider, OpenCode) — **6 verified against real runs** (Claude Code, Codex, Ollama, Aider, OpenCode, Gemini CLI — the last four installed and tested live, three with a real API key/local model, after the first pass shipped as "documented"). The other 2 (Cursor, LM Studio) had real install/CLI attempts too — each blocked from a full dispatch by something concrete and disclosed (a missing credential for Cursor, no GUI session for LM Studio), not left untested by choice |
 | **Worktree isolation** | Yes, via `--worktree` | Yes — real `git worktree` commands, tested against a real repo |
 | **Agent assignment** | Manual (`assignee` field) | Manual (`assign` command) — same model, this isn't the routing-intelligence project (see [switchboard](https://github.com/PlainJane20/switchboard) for that) |
 | **Memory** | `memory/{decisions,lessons,preferences}` | Same shape — decisions, lessons, preferences, git-tracked markdown |
-| **Onboarding** | `livery onboard` guided flow | `agent-hq onboard` — plain-language glossary, `doctor` check, interactive agent registration |
+| **Onboarding** | `livery onboard` guided flow | `muster onboard` — plain-language glossary, `doctor` check, interactive agent registration |
 | **Scheduling, Talk, Walkie-Talkie, Telegram** | Yes | Not in this version — see [What's next](#whats-next) |
 | **Maturity** | Versioned, changelogged, real usage | Built this week, 51 tests, no production mileage |
 
@@ -106,7 +106,7 @@ That second warning is real code (`dispatch.py`'s `filesystem_verified` check), 
 
 ## What "verified" actually means here
 
-Every runtime falls into exactly one of two buckets, and it's disclosed in three places: the agent registry (`agent-hq agent-list`), `agent-hq doctor`, and this table.
+Every runtime falls into exactly one of two buckets, and it's disclosed in three places: the agent registry (`muster agent-list`), `muster doctor`, and this table.
 
 | Runtime | Status | What was actually checked |
 |---|---|---|
@@ -184,7 +184,7 @@ Full design rationale — including the exact commands run to verify Claude Code
 - **The same flag turned out to be needed even more than that first finding suggested.** Getting a real `GEMINI_API_KEY` and running an actual authenticated dispatch showed `--skip-trust` isn't just needed alongside a *requested* approval mode — Gemini CLI refuses to run at all in an untrusted directory (exit 55), even at `read_only`, which sends no `--approval-mode` flag whatsoever. The adapter now sends `--skip-trust` unconditionally. Caught only by actually getting a key and dispatching for real, not by re-reading `--help` more carefully.
 - **A GUI-only tool is a different kind of "can't verify" than a missing API key.** LM Studio really did install via `brew install --cask lm-studio` — but this environment has no window-server session, so the app can never complete first-run setup; attempting to launch it falls through to its embedded Electron/Node runtime's own bare `--help` output instead of starting anything. Cursor is one credential away from a full dispatch (Gemini CLI got that credential and is now fully verified); LM Studio needs an actual desktop session, and no amount of further installing changes that here.
 - **The fix for "reported success ≠ real change" had its own bug, caught on the first real dispatch it ran against.** The new `filesystem_verified` check (see What's next) initially counted *any* uncommitted change as proof something real happened. A live Aider dispatch that reported success but changed nothing still passed that check, because Aider's own `.gitignore` housekeeping ("Added .aider* to .gitignore") counted as a change. Filtering out dotfile-only diffs before deciding "yes, something changed" fixed it — confirmed by rerunning the identical dispatch and watching the warning correctly appear.
-- **Proving *something* changed isn't the same as proving the *right* thing changed.** A follow-up real dispatch asking Aider to append a line to README.md instead committed a new, literally-named file called `Verified by agent-hq.` with no content. `filesystem_verified` correctly read `True` — a real commit did happen — but it wasn't the requested edit. This is now a stated scope boundary in the code, not a false claim of correctness: the check answers "did the tool do something real," not "did the tool do the right thing."
+- **Proving *something* changed isn't the same as proving the *right* thing changed.** A follow-up real dispatch asking Aider to append a line to README.md instead committed a new, literally-named file called `Verified by muster.` with no content. `filesystem_verified` correctly read `True` — a real commit did happen — but it wasn't the requested edit. This is now a stated scope boundary in the code, not a false claim of correctness: the check answers "did the tool do something real," not "did the tool do the right thing."
 
 Worktree isolation, proven the same way — not asserted. A real dispatch to a file-editing agent (`tool_access: standard`) created `worktree-proof.txt`, and afterward:
 
@@ -192,7 +192,7 @@ Worktree isolation, proven the same way — not asserted. A real dispatch to a f
 $ ls worktree-proof.txt                 # main working tree
 ls: worktree-proof.txt: No such file or directory
 
-$ cat .agent-hq/worktrees/0003-*/worktree-proof.txt
+$ cat .muster/worktrees/0003-*/worktree-proof.txt
 worktree isolation works.
 
 $ git status --short                    # main tree, after the dispatch
@@ -219,7 +219,7 @@ The file exists only in the isolated worktree. The main tree's only change is th
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"     # installs the real `agent-hq` command
+pip install -e ".[dev]"     # installs the real `muster` command
 pytest tests/ -v             # fully offline -- real git worktree tests, mocked runtime calls
 ```
 
@@ -229,53 +229,53 @@ No API keys to configure here — auth is handled by whichever tool's CLI you're
 
 ```bash
 # New to this? Start here -- guided setup, no prior knowledge needed
-agent-hq onboard
+muster onboard
 
 # Check what's actually installed and usable on this machine
-agent-hq doctor
+muster doctor
 
 # Register an agent interactively (or hand-write a markdown file -- see agents/README.md)
-agent-hq agent-hire
-agent-hq agent-list
+muster agent-hire
+muster agent-list
 
 # File a ticket and assign it
-agent-hq ticket-new --title "Summarize this doc" --tags research --body "..."
-agent-hq assign 0001 claude-researcher
+muster ticket-new --title "Summarize this doc" --tags research --body "..."
+muster assign 0001 claude-researcher
 
 # See what dispatching would do -- prints only, nothing runs
-agent-hq dispatch 0001
+muster dispatch 0001
 
 # Actually run it
-agent-hq dispatch 0001 --run
+muster dispatch 0001 --run
 
 # Full ticket detail, including every dispatch attempt -- and whether
 # its process is actually still alive, not just what the record says
-agent-hq ticket-show 0001
+muster ticket-show 0001
 
 # Control a running dispatch from a second terminal -- real OS signals
 # against the real PID, no daemon involved (see ARCHITECTURE.md)
-agent-hq pause 0001-20260901T130307
-agent-hq resume 0001-20260901T130307
-agent-hq kill 0001-20260901T130307 --force
+muster pause 0001-20260901T130307
+muster resume 0001-20260901T130307
+muster kill 0001-20260901T130307 --force
 
 # See active worktrees, remove one when you're done reviewing it
-agent-hq worktree-list
-agent-hq worktree-remove 0001 --repo /path/to/the/repo
+muster worktree-list
+muster worktree-remove 0001 --repo /path/to/the/repo
 
 # Record something worth remembering across sessions
-agent-hq memory-add --type lesson --title "..." --body "..."
-agent-hq memory-search "worktree"
+muster memory-add --type lesson --title "..." --body "..."
+muster memory-search "worktree"
 
 # Close it out
-agent-hq close 0001 --summary "Done."
-agent-hq board
+muster close 0001 --summary "Done."
+muster board
 ```
 
 ## Repository map
 
 ```text
-agent-hq/
-├── agent_hq/
+muster/
+├── muster/
 │   ├── models.py             Agent, Ticket, DispatchAttempt, MemoryEntry -- verification tier lives here
 │   ├── frontmatter.py        Minimal YAML-frontmatter markdown parsing
 │   ├── registry.py           Loads agents/*.md
@@ -295,7 +295,7 @@ agent-hq/
 │   │   ├── gemini_cli.py     VERIFIED (real GEMINI_API_KEY, real dispatch through the full pipeline)
 │   │   ├── cursor_agent.py   documented -- flags/error shape confirmed live, blocked by missing API key
 │   │   └── lm_studio.py      documented -- real install attempted, blocked by no GUI session in this environment
-│   └── cli.py                `agent-hq <command>`, including the onboard wizard
+│   └── cli.py                `muster <command>`, including the onboard wizard
 ├── agents/                   Ten example agents across 8 runtimes (two each on claude_code and aider)
 ├── tickets/                  Five real tickets, dispatched for real to prove it works
 ├── memory/{decisions,lessons,preferences}/

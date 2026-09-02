@@ -17,8 +17,8 @@ from datetime import date
 from pathlib import Path
 from typing import List, Optional
 
-from agent_hq import frontmatter
-from agent_hq.models import MemoryEntry, MemoryType
+from muster import frontmatter
+from muster.models import MemoryEntry, MemoryType
 
 DEFAULT_MEMORY_DIR = Path("memory")
 

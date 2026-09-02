@@ -10,9 +10,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from agent_hq.models import AttemptStatus, DispatchAttempt
+from muster.models import AttemptStatus, DispatchAttempt
 
-DEFAULT_ATTEMPTS_DIR = Path(".agent-hq") / "attempts"
+DEFAULT_ATTEMPTS_DIR = Path(".muster") / "attempts"
 
 
 def _attempt_id(ticket_id: str, started_at: datetime) -> str:

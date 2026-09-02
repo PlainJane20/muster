@@ -7,7 +7,7 @@ If the agent's cwd is a git repo and use_worktree is set, the dispatch
 runs in its own git worktree (see worktree.py) instead of the shared
 directory -- created before the run, deliberately left in place after
 (not auto-removed) so a human can inspect or merge what the agent did.
-`agent-hq worktree remove` cleans it up explicitly.
+`muster worktree remove` cleans it up explicitly.
 
 For standard/full dispatches with a worktree, a successful attempt also
 gets its `filesystem_verified` field cross-checked against the worktree's
@@ -21,10 +21,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from agent_hq import attempts as attempts_mod
-from agent_hq import worktree as worktree_mod
-from agent_hq.models import Agent, DispatchAttempt, Ticket
-from agent_hq.runtimes import (
+from muster import attempts as attempts_mod
+from muster import worktree as worktree_mod
+from muster.models import Agent, DispatchAttempt, Ticket
+from muster.runtimes import (
     aider, claude_code, codex, cursor_agent, gemini_cli, lm_studio, ollama, opencode,
 )
 
@@ -141,5 +141,5 @@ def dispatch(agent: Agent, ticket: Ticket, run: bool = False) -> Optional[Dispat
         )
     if worktree_path:
         print(f"\nWorktree left in place for review: {worktree_path}")
-        print(f"Remove it with: agent-hq worktree remove {ticket.id}")
+        print(f"Remove it with: muster worktree remove {ticket.id}")
     return attempt

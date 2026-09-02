@@ -1,5 +1,5 @@
-"""The `agent-hq` command surface. If you're new to AI agents: run
-`agent-hq onboard` first -- it walks you through everything below without
+"""The `muster` command surface. If you're new to AI agents: run
+`muster onboard` first -- it walks you through everything below without
 needing to already know what any of these words mean."""
 
 from __future__ import annotations
@@ -9,14 +9,14 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from agent_hq import attempts as attempts_mod
-from agent_hq import control as control_mod
-from agent_hq import dispatch as dispatch_mod
-from agent_hq import doctor as doctor_mod
-from agent_hq import memory as memory_mod
-from agent_hq import registry, tickets
-from agent_hq import worktree as worktree_mod
-from agent_hq.models import Agent
+from muster import attempts as attempts_mod
+from muster import control as control_mod
+from muster import dispatch as dispatch_mod
+from muster import doctor as doctor_mod
+from muster import memory as memory_mod
+from muster import registry, tickets
+from muster import worktree as worktree_mod
+from muster.models import Agent
 
 STATUS_EMOJI = {"open": "⚪", "assigned": "🔵", "in_progress": "🟡", "done": "🟢", "cancelled": "⚫"}
 
@@ -34,7 +34,7 @@ risk_tier: low
 
 Plain English: what does this agent do, and when should a ticket go to it?
 
-Easier way: run `agent-hq onboard` or `agent-hq agent-hire` and answer a
+Easier way: run `muster onboard` or `muster agent-hire` and answer a
 few questions -- no YAML editing required.
 """
 
@@ -67,7 +67,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmd_onboard(args: argparse.Namespace) -> int:
     print("=" * 70)
-    print("Welcome to agent-hq.")
+    print("Welcome to muster.")
     print("=" * 70)
     print(
         "\nHere's the whole idea in plain English:\n"
@@ -87,9 +87,9 @@ def cmd_onboard(args: argparse.Namespace) -> int:
         _interactive_hire()
 
     print("\nYou're set up. Try:")
-    print("  agent-hq agent-list")
-    print("  agent-hq ticket-new --title \"...\" --tags a,b")
-    print("  agent-hq dispatch <ticket-id> --agent <agent-id>")
+    print("  muster agent-list")
+    print("  muster ticket-new --title \"...\" --tags a,b")
+    print("  muster dispatch <ticket-id> --agent <agent-id>")
     return 0
 
 
@@ -128,7 +128,7 @@ def cmd_agent_hire(args: argparse.Namespace) -> int:
 def cmd_agent_list(args: argparse.Namespace) -> int:
     agents = registry.load_agents()
     if not agents:
-        print("No agents registered yet. Run `agent-hq onboard` or `agent-hq agent-hire`.")
+        print("No agents registered yet. Run `muster onboard` or `muster agent-hire`.")
         return 0
     for a in agents:
         tier = "verified" if a.verification == "verified" else "documented only"
@@ -176,7 +176,7 @@ def cmd_ticket_show(args: argparse.Namespace) -> int:
 def cmd_assign(args: argparse.Namespace) -> int:
     agents_map = registry.agents_by_id()
     if args.agent_id not in agents_map:
-        print(f"{args.agent_id!r} isn't registered. See `agent-hq agent-list`.")
+        print(f"{args.agent_id!r} isn't registered. See `muster agent-list`.")
         return 1
     tickets.update_ticket(args.ticket_id, status="assigned", assignee=args.agent_id)
     print(f"Ticket {args.ticket_id} assigned to {args.agent_id}.")
@@ -192,7 +192,7 @@ def cmd_dispatch(args: argparse.Namespace) -> int:
     agents_map = registry.agents_by_id()
     agent = agents_map.get(agent_id)
     if agent is None:
-        print(f"{agent_id!r} isn't registered. See `agent-hq agent-list`.")
+        print(f"{agent_id!r} isn't registered. See `muster agent-list`.")
         return 1
 
     if ticket.assignee != agent_id:
@@ -224,7 +224,7 @@ def cmd_pause(args: argparse.Namespace) -> int:
     except (ValueError, RuntimeError) as e:
         print(f"Couldn't pause {args.attempt_id}: {e}")
         return 1
-    print(f"Paused attempt {attempt.id} (pid {attempt.pid}). Resume with: agent-hq resume {attempt.id}")
+    print(f"Paused attempt {attempt.id} (pid {attempt.pid}). Resume with: muster resume {attempt.id}")
     return 0
 
 
@@ -266,7 +266,7 @@ def cmd_board(args: argparse.Namespace) -> int:
 # --- worktree -------------------------------------------------------------
 
 def cmd_worktree_list(args: argparse.Namespace) -> int:
-    root = Path(".agent-hq/worktrees")
+    root = Path(".muster/worktrees")
     if not root.exists():
         print("No worktrees created yet.")
         return 0
@@ -279,7 +279,7 @@ def cmd_worktree_remove(args: argparse.Namespace) -> int:
     if not args.repo:
         print("Pass --repo <path to the git repo the worktree was created from>.")
         return 1
-    matches = [p for p in Path(".agent-hq/worktrees").glob(f"{args.ticket_id}-*")] if Path(".agent-hq/worktrees").exists() else []
+    matches = [p for p in Path(".muster/worktrees").glob(f"{args.ticket_id}-*")] if Path(".muster/worktrees").exists() else []
     if not matches:
         print(f"No worktree found for ticket {args.ticket_id}.")
         return 1
@@ -310,7 +310,7 @@ def cmd_memory_search(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="agent-hq")
+    parser = argparse.ArgumentParser(prog="muster")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("onboard", help="Guided setup for first-time users -- start here").set_defaults(func=cmd_onboard)

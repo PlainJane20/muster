@@ -24,7 +24,7 @@ import json
 import urllib.request
 from typing import Optional
 
-from agent_hq.models import RuntimeResult, ToolAccess
+from muster.models import RuntimeResult, ToolAccess
 
 DEFAULT_BASE_URL = "http://localhost:11434"
 

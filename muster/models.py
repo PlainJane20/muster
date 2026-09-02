@@ -1,4 +1,4 @@
-"""Typed contracts for agent-hq.
+"""Typed contracts for muster.
 
 One deliberate choice runs through every model here: nothing forces you to
 already know what a "permission mode" or "sandbox policy" is. `tool_access`

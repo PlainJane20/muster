@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-WORKTREES_ROOT = Path(".agent-hq") / "worktrees"
+WORKTREES_ROOT = Path(".muster") / "worktrees"
 
 
 def _run_git(args, cwd: Path) -> subprocess.CompletedProcess:
@@ -60,7 +60,7 @@ def create_worktree(repo_path: Path, ticket_id: str, worktrees_root: Path = WORK
     worktrees_root.mkdir(parents=True, exist_ok=True)
     slug = f"{ticket_id}-{int(time.time())}"
     worktree_path = (worktrees_root / slug).resolve()
-    branch_name = f"agent-hq/{slug}"
+    branch_name = f"muster/{slug}"
 
     result = _run_git(
         ["worktree", "add", "-b", branch_name, str(worktree_path)], cwd=repo_path
@@ -116,7 +116,7 @@ def has_real_changes(worktree_path: Path, base_commit: Optional[str]) -> Optiona
     Important scope boundary, also found on a real dispatch: `True` means
     *something* real changed, not that the *right* thing changed. A
     follow-up dispatch asking Aider to append a line to README.md instead
-    committed a new, literally-named file called `Verified by agent-hq.`
+    committed a new, literally-named file called `Verified by muster.`
     with no content -- a real commit, correctly detected as True, but not
     the requested edit. This function answers "did the tool actually do
     something," which is strictly more than exit-code-and-stdout proves,

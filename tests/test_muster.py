@@ -14,15 +14,15 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agent_hq import attempts as attempts_mod  # noqa: E402
-from agent_hq import control as control_mod  # noqa: E402
-from agent_hq import dispatch as dispatch_mod  # noqa: E402
-from agent_hq import doctor as doctor_mod  # noqa: E402
-from agent_hq import memory as memory_mod  # noqa: E402
-from agent_hq import registry, tickets  # noqa: E402
-from agent_hq import worktree as worktree_mod  # noqa: E402
-from agent_hq.models import Agent, RuntimeResult  # noqa: E402
-from agent_hq.runtimes import (  # noqa: E402
+from muster import attempts as attempts_mod  # noqa: E402
+from muster import control as control_mod  # noqa: E402
+from muster import dispatch as dispatch_mod  # noqa: E402
+from muster import doctor as doctor_mod  # noqa: E402
+from muster import memory as memory_mod  # noqa: E402
+from muster import registry, tickets  # noqa: E402
+from muster import worktree as worktree_mod  # noqa: E402
+from muster.models import Agent, RuntimeResult  # noqa: E402
+from muster.runtimes import (  # noqa: E402
     aider, claude_code, codex, cursor_agent, gemini_cli, lm_studio, ollama, opencode,
 )
 

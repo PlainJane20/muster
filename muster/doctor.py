@@ -1,4 +1,4 @@
-"""`agent-hq doctor` -- checks which runtimes are actually usable on this
+"""`muster doctor` -- checks which runtimes are actually usable on this
 machine, and is honest about the separate question of whether the code
 for them has been verified at all (see models.RUNTIME_VERIFICATION).
 Availability and verification are different facts; this reports both so
@@ -10,7 +10,7 @@ import shutil
 import urllib.request
 from typing import NamedTuple
 
-from agent_hq.models import RUNTIME_VERIFICATION
+from muster.models import RUNTIME_VERIFICATION
 
 
 class RuntimeStatus(NamedTuple):

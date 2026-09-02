@@ -32,7 +32,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from agent_hq.models import RuntimeResult, ToolAccess
+from muster.models import RuntimeResult, ToolAccess
 
 _TOOL_ACCESS_TO_SANDBOX = {
     "read_only": "read-only",

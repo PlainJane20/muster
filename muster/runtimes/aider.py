@@ -32,7 +32,7 @@ but the abbreviated form was never actually broken.
 
 Separately, and more important than it sounds: **a reported success does
 not guarantee a persisted change.** A live edit dispatch through the full
-agent-hq pipeline (real ticket, real worktree, tool_access=standard)
+muster pipeline (real ticket, real worktree, tool_access=standard)
 printed "Applied edit to README.md" and returned exit code 0 -- but
 checking `git log` in that worktree afterward showed no new commit at
 all. The small local model's response mixed real content with echoed
@@ -51,7 +51,7 @@ from __future__ import annotations
 import subprocess
 from typing import List, Optional
 
-from agent_hq.models import RuntimeResult, ToolAccess
+from muster.models import RuntimeResult, ToolAccess
 
 
 def run(

@@ -20,7 +20,7 @@ import json
 import subprocess
 from typing import List, Optional
 
-from agent_hq.models import RuntimeResult, ToolAccess
+from muster.models import RuntimeResult, ToolAccess
 
 _TOOL_ACCESS_TO_TOOLS = {
     "read_only": ["Read", "Grep", "Glob"],

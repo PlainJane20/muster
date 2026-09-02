@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agent-hq"
+name = "muster"
 version = "0.1.0"
 description = "Hire AI agents, file tickets, dispatch to real live runtimes -- a git-native platform for running a small AI team."
 readme = "README.md"
@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=8.0.0"]
 
 [project.scripts]
-agent-hq = "agent_hq.cli:main"
+muster = "muster.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["agent_hq*"]
+include = ["muster*"]

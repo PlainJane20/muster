@@ -1,5 +1,5 @@
 """Minimal YAML-frontmatter markdown parsing: `---\\nYAML\\n---\\nbody`.
-Every durable thing in agent-hq (agents, tickets, memory entries) is one
+Every durable thing in muster (agents, tickets, memory entries) is one
 of these files. Git is the database -- there's no separate store to keep
 in sync with what's actually on disk."""
 
