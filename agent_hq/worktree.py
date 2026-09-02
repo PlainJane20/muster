@@ -41,6 +41,22 @@ def create_worktree(repo_path: Path, ticket_id: str, worktrees_root: Path = WORK
     if not is_git_repo(repo_path):
         raise ValueError(f"{repo_path} is not a git repository -- can't create a worktree in it")
 
+    # Real failure mode, hit during development: a `git init` with zero
+    # commits has no HEAD to branch a worktree off of. Checked directly
+    # here instead of string-matching git's stderr for "not a valid
+    # object name: 'HEAD'" after the fact -- that exact wording turned
+    # out to vary by git version (confirmed failing on a newer git in CI
+    # than the one this was written against locally), which is exactly
+    # the kind of "verified, not asserted" bug this project's README
+    # says it cares about catching.
+    head_check = _run_git(["rev-parse", "--verify", "HEAD"], cwd=repo_path)
+    if head_check.returncode != 0:
+        raise RuntimeError(
+            f"{repo_path} has no commits yet -- a worktree needs "
+            f"something to branch off of. Make an initial commit in "
+            f"that repo first, then try again."
+        )
+
     worktrees_root.mkdir(parents=True, exist_ok=True)
     slug = f"{ticket_id}-{int(time.time())}"
     worktree_path = (worktrees_root / slug).resolve()
@@ -50,15 +66,6 @@ def create_worktree(repo_path: Path, ticket_id: str, worktrees_root: Path = WORK
         ["worktree", "add", "-b", branch_name, str(worktree_path)], cwd=repo_path
     )
     if result.returncode != 0:
-        if "not a valid object name: 'HEAD'" in result.stderr:
-            # Real failure mode, hit during development: a `git init`
-            # with zero commits has no HEAD to branch a worktree off of.
-            # The raw git error doesn't say that in plain language.
-            raise RuntimeError(
-                f"{repo_path} has no commits yet -- a worktree needs "
-                f"something to branch off of. Make an initial commit in "
-                f"that repo first, then try again."
-            )
         raise RuntimeError(f"git worktree add failed: {result.stderr.strip()}")
     return worktree_path
 
