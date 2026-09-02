@@ -44,13 +44,13 @@ Run `muster onboard` and it walks you through all of this interactively — chec
 
 muster is a git-native platform for running a small team of AI agents locally: hire an agent (one markdown file), file a ticket, dispatch it for real. It's a positioned, honest competitor to [Livery](https://github.com/sohailmamdani/livery) — same core idea (agents and tickets as plain files, no database) — built independently, with its own tradeoffs stated plainly rather than glossed over.
 
-**Related work in this portfolio:** [switchboard](https://github.com/PlainJane20/switchboard)
-and [taskloom](https://github.com/PlainJane20/taskloom) are two more
-independent takes on the same underlying interest — orchestrating a
-fleet of AI agents — not a connected pipeline with this one, three
-separate explorations of different angles. Switchboard adds automatic
-ticket-to-agent routing (this repo assigns manually, on purpose);
-taskloom takes the visual-desktop-app angle instead of headless CLI.
+> **Related work in this portfolio:** [switchboard](https://github.com/PlainJane20/switchboard)
+> and [taskloom](https://github.com/PlainJane20/taskloom) are two more
+> independent takes on the same underlying interest — orchestrating a
+> fleet of AI agents — not a connected pipeline with this one, three
+> separate explorations of different angles. Switchboard adds automatic
+> ticket-to-agent routing (this repo assigns manually, on purpose);
+> taskloom takes the visual-desktop-app angle instead of headless CLI.
 
 **Explore:** [Who it's for](#who-its-for) · [vs. Livery](#how-this-compares-to-livery) · [Verification](#what-verified-actually-means-here) · [How it works](#how-it-works) · [Architecture](#architecture) · [Setup](#setup) · [Usage](#usage)
 
