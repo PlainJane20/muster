@@ -14,6 +14,7 @@ Hire agents. File tickets. Dispatch to real, live runtimes — not canned script
 [![6 Verified Runtimes](https://img.shields.io/badge/Runtimes-6_Verified_%2B_2_Documented-2a9d8f)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
 [![Status: Reference Implementation](https://img.shields.io/badge/status-reference%20implementation-6f42c1)](#whats-next)
+[![CI](https://github.com/PlainJane20/agent-hq/actions/workflows/ci.yml/badge.svg)](https://github.com/PlainJane20/agent-hq/actions/workflows/ci.yml)
 
 </div>
 
@@ -99,7 +100,7 @@ That second warning is real code (`dispatch.py`'s `filesystem_verified` check), 
 | **Memory** | `memory/{decisions,lessons,preferences}` | Same shape — decisions, lessons, preferences, git-tracked markdown |
 | **Onboarding** | `livery onboard` guided flow | `agent-hq onboard` — plain-language glossary, `doctor` check, interactive agent registration |
 | **Scheduling, Talk, Walkie-Talkie, Telegram** | Yes | Not in this version — see [What's next](#whats-next) |
-| **Maturity** | Versioned, changelogged, real usage | Built this week, 24 tests, no production mileage |
+| **Maturity** | Versioned, changelogged, real usage | Built this week, 51 tests, no production mileage |
 
 The honest summary: this isn't feature parity, and doesn't claim to be. It's the same core loop (hire, ticket, dispatch, remember), built independently, with **verification status disclosed per-runtime** instead of a flat "5 adapters" claim — which is a thing Livery's own README doesn't do either, for what it's worth.
 
