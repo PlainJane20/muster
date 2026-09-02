@@ -102,7 +102,7 @@ That second warning is real code (`dispatch.py`'s `filesystem_verified` check), 
 | **Scheduling, Talk, Walkie-Talkie, Telegram** | Yes | Not in this version — see [What's next](#whats-next) |
 | **Maturity** | Versioned, changelogged, real usage | Built this week, 51 tests, no production mileage |
 
-The honest summary: this isn't feature parity, and doesn't claim to be. It's the same core loop (hire, ticket, dispatch, remember), built independently, with **verification status disclosed per-runtime** instead of a flat "5 adapters" claim — which is a thing Livery's own README doesn't do either, for what it's worth.
+**Attribution, plainly stated:** Livery is the inspiration for this project's core shape — agents and tickets as plain files, no database, git as the source of truth. No code, docs, or config from Livery were copied; every file here was written independently against that shared idea, not against Livery's source. The honest summary: this isn't feature parity, and doesn't claim to be. It's the same core loop (hire, ticket, dispatch, remember), built independently, with **verification status disclosed per-runtime** instead of a flat "5 adapters" claim — which is a thing Livery's own README doesn't do either, for what it's worth.
 
 ## What "verified" actually means here
 
