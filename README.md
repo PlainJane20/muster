@@ -56,7 +56,7 @@ muster is a git-native platform for running a small team of AI agents locally: h
 
 ### Architecture pattern
 
-**Router/Dispatcher, minus the routing.** `muster/dispatch.py` takes a ticket and an agent you assigned by hand, builds the prompt, and launches that agent's runtime (`muster/runtimes/`), usually in a fresh git worktree (`muster/worktree.py`). It records the outcome as an attempt (`muster/attempts.py`) and can pause or kill the process (`muster/control.py`). Nothing chooses the agent; assignment is deliberately manual, which is the gap switchboard fills.
+**Manual dispatcher: a launcher with no routing.** `muster/dispatch.py` takes a ticket and an agent you assigned by hand, builds the prompt, and launches that agent's runtime (`muster/runtimes/`), usually in a fresh git worktree (`muster/worktree.py`). It records the outcome as an attempt (`muster/attempts.py`) and can pause or kill the process (`muster/control.py`). Nothing chooses the agent; assignment is deliberately manual, which is the gap switchboard fills.
 
 - **Deterministic vs model-driven:** Muster itself is entirely deterministic and calls no model. The model-driven work happens inside the external tool it launches (Claude Code, Aider, Codex and so on).
 - **Human gate:** `dispatch` only prints what it would do unless `--run` is given. Medium- and high-risk agents print a `WARNING` on `--run` but are not blocked, and `filesystem_verified` only checks that a git change exists, not that it is correct.
@@ -72,7 +72,7 @@ In one sentence: it's a single, consistent front door to a whole shelf of differ
 
 - **Hire** an agent once (a markdown file naming which tool it uses and how much it's allowed to do), instead of re-typing that tool's flags every time.
 - **File a ticket** the same way regardless of which tool ends up running it — one format, not eight.
-- **Dispatch for real**, with a plain three-level access dial (`read_only` / `standard` / `full`) that means the same thing across every tool, instead of you having to know that this one calls it `--sandbox`, that one calls it `--approval-mode`, and another has no concept of it at all.
+- **Dispatch for real**, with a plain three-level access dial (`read_only` / `standard` / `full`) that muster translates into each tool's own flags (`--sandbox`, `--approval-mode`, and so on), instead of you having to know them. Muster only passes the flags; the tool enforces them, and the dial does nothing for Ollama and LM Studio (no such concept; the Ollama adapter has no file or shell tools anyway), and Codex `standard`/`full` has not been exercised live.
 - **Get an honest answer on "did it actually work"** — a real git worktree per dispatch, and a filesystem check that catches a tool claiming success when no git change exists (see the example above). Limits: `filesystem_verified` only proves a git diff/commit exists in the worktree, not that the change is correct or what was asked for. Risk tiers (`risk_tier`) are advisory: they print a `WARNING` on `--run` and never block a dispatch.
 
 ### Who it's for
@@ -112,7 +112,7 @@ That second warning is real code (`dispatch.py`'s `filesystem_verified` check), 
 |---|---|---|
 | **Runtimes** | 5 (Claude Code, Codex, Cursor, LM Studio, Ollama) | **8 registered** (those 5 plus Gemini CLI, Aider, OpenCode) — **6 verified against real runs** (Claude Code, Codex, Ollama, Aider, OpenCode, Gemini CLI — the last four installed and tested live, three with a real API key/local model, after the first pass shipped as "documented"). The other 2 (Cursor, LM Studio) had real install/CLI attempts too — each blocked from a full dispatch by something concrete and disclosed (a missing credential for Cursor, no GUI session for LM Studio), not left untested by choice |
 | **Worktree isolation** | Yes, via `--worktree` | Yes — real `git worktree` commands, tested against a real repo |
-| **Agent assignment** | Manual (`assignee` field) | Manual (`assign` command) — same model, this isn't the routing-intelligence project (see [switchboard](https://github.com/PlainJane20/switchboard) for that) |
+| **Agent assignment** | Manual (`assignee` field) | Manual (`assign` command) — same model, this isn't the automatic-routing project (see [switchboard](https://github.com/PlainJane20/switchboard) for that) |
 | **Memory** | `memory/{decisions,lessons,preferences}` | Same shape — decisions, lessons, preferences, git-tracked markdown |
 | **Onboarding** | `livery onboard` guided flow | `muster onboard` — plain-language glossary, `doctor` check, interactive agent registration |
 | **Scheduling, Talk, Walkie-Talkie, Telegram** | Yes | Not in this version — see [What's next](#whats-next) |
@@ -314,7 +314,7 @@ muster/
 │   │   ├── cursor_agent.py   documented -- flags/error shape confirmed live, blocked by missing API key
 │   │   └── lm_studio.py      documented -- real install attempted, blocked by no GUI session in this environment
 │   └── cli.py                `muster <command>`, including the onboard wizard
-├── agents/                   Ten example agents across 8 runtimes (two each on claude_code and aider)
+├── agents/                   Twelve example agents across 8 runtimes (three on aider, two each on claude_code and opencode)
 ├── tickets/                  Five real tickets, dispatched for real to prove it works
 ├── memory/{decisions,lessons,preferences}/
 ├── tests/                    51 tests -- real git for worktrees, mocked subprocess/HTTP for runtimes
