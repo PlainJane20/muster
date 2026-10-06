@@ -24,7 +24,7 @@ Hire agents. File tickets. Dispatch to real, live runtimes — not canned script
 
 | 12 registered agents | 8 runtimes | 51 tests | New to AI agents? |
 |:---:|:---:|:---:|:---:|
-| One markdown file each | 6 verified live, 2 documented (flags/errors confirmed live) | Fully offline, real git worktree tests | Run `muster onboard` |
+| One markdown file each | 6 verified live, 2 documented (flags/errors confirmed live) | Tests run offline (real git worktrees, mocked runtime calls) | Run `muster onboard` |
 
 </div>
 
@@ -65,7 +65,7 @@ In one sentence: it's a single, consistent front door to a whole shelf of differ
 - **Hire** an agent once (a markdown file naming which tool it uses and how much it's allowed to do), instead of re-typing that tool's flags every time.
 - **File a ticket** the same way regardless of which tool ends up running it — one format, not eight.
 - **Dispatch for real**, with a plain three-level access dial (`read_only` / `standard` / `full`) that means the same thing across every tool, instead of you having to know that this one calls it `--sandbox`, that one calls it `--approval-mode`, and another has no concept of it at all.
-- **Get an honest answer on "did it actually work"** — a real git worktree per dispatch, and now a real filesystem check that catches a tool claiming success on a change that never happened (see the example above).
+- **Get an honest answer on "did it actually work"** — a real git worktree per dispatch, and a filesystem check that catches a tool claiming success when no git change exists (see the example above). Limits: `filesystem_verified` only proves a git diff/commit exists in the worktree, not that the change is correct or what was asked for. Risk tiers (`risk_tier`) are advisory: they print a `WARNING` on `--run` and never block a dispatch.
 
 ### Who it's for
 
@@ -228,8 +228,10 @@ The file exists only in the isolated worktree. The main tree's only change is th
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"     # installs the real `muster` command
-pytest tests/ -v             # fully offline -- real git worktree tests, mocked runtime calls
+pytest tests/ -v             # 51 tests, offline -- real git worktree tests, mocked runtime calls
 ```
+
+Expected result: `51 passed` (verified on Python 3.9 and 3.14). Two caveats on what the checks mean: `risk_tier` is advisory only (a medium/high-risk agent prints a `WARNING` with `--run` but is never blocked), and `filesystem_verified` only proves a git diff or commit exists in the worktree, not that the change is correct.
 
 No API keys to configure here — auth is handled by whichever tool's CLI you're dispatching to (`claude`, `codex`, etc. use their own existing login).
 
@@ -307,7 +309,7 @@ muster/
 ├── agents/                   Ten example agents across 8 runtimes (two each on claude_code and aider)
 ├── tickets/                  Five real tickets, dispatched for real to prove it works
 ├── memory/{decisions,lessons,preferences}/
-├── tests/                    32 tests -- real git for worktrees, mocked subprocess/HTTP for runtimes
+├── tests/                    51 tests -- real git for worktrees, mocked subprocess/HTTP for runtimes
 └── ARCHITECTURE.md           Design rationale, decision by decision
 ```
 
