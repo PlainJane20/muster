@@ -54,6 +54,14 @@ muster is a git-native platform for running a small team of AI agents locally: h
 
 **Explore:** [Who it's for](#who-its-for) · [vs. Livery](#how-this-compares-to-livery) · [Verification](#what-verified-actually-means-here) · [How it works](#how-it-works) · [Architecture](#architecture) · [Setup](#setup) · [Usage](#usage)
 
+### Architecture pattern
+
+**Router/Dispatcher, minus the routing.** `muster/dispatch.py` takes a ticket and an agent you assigned by hand, builds the prompt, and launches that agent's runtime (`muster/runtimes/`), usually in a fresh git worktree (`muster/worktree.py`). It records the outcome as an attempt (`muster/attempts.py`) and can pause or kill the process (`muster/control.py`). Nothing chooses the agent; assignment is deliberately manual, which is the gap switchboard fills.
+
+- **Deterministic vs model-driven:** Muster itself is entirely deterministic and calls no model. The model-driven work happens inside the external tool it launches (Claude Code, Aider, Codex and so on).
+- **Human gate:** `dispatch` only prints what it would do unless `--run` is given. Medium- and high-risk agents print a `WARNING` on `--run` but are not blocked, and `filesystem_verified` only checks that a git change exists, not that it is correct.
+- **Honest limit:** It is a launcher and bookkeeper, not an orchestrator or an agent: it does no planning, decomposition or multi-agent coordination, and it cannot judge whether a runtime's work was right.
+
 ### Why this exists
 
 Most "AI agent platform" projects either (a) claim to support a long list of tools without anyone having actually run half of them, or (b) hide how thin that list really is behind a database and a UI. muster does neither: every runtime here is labeled verified or documented based on whether it was actually installed and dispatched against for real — not asserted — and the whole thing is a handful of Python files and markdown, no server, no database, so you can read every line that decides what happens to your machine.
