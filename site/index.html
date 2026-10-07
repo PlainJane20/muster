@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>muster: A git-native AI team you run locally</title>
+<meta name="description" content="Hire an agent (one markdown file), file a ticket, dispatch it to a real runtime. muster is a single front door to a shelf of AI coding and writing tools, with git worktree isolation and a durable record of every attempt. It is a launcher and bookkeeper, not an orchestrator or an agent: it calls no model, and it cannot judge whether a runtime&#x27;s work was right.">
+<style>/* Shared design system. Per-project accent variables are injected after this file. */
+:root{
+  --bg:#f4f6fc; --surface:#eaeefa; --surface-2:#dfe5f6; --card:#ffffff; --hero:#e4e9f8; --text:#12161c; --muted:#4a5565;
+  --border:#d5dbe3; --link:#0b57d0;
+  --ok-bg:#e3f4e8; --ok-fg:#14532d; --ok-bd:#9bd3ad;
+  --sim-bg:#fdf0c9; --sim-fg:#6b3a05; --sim-bd:#e8c56a;
+  --warn-bg:#fde4e1; --warn-fg:#8a1c14; --warn-bd:#eea59d;
+  --info-bg:#e4edfc; --info-fg:#1b3a7a; --info-bd:#a9c0ee;
+  --accent:#0b57d0; --accent-ink:#0b57d0; --accent-fill:#0b57d0; --on-accent:#ffffff; --accent-soft:#0b57d01f;
+  --radius:14px; --shadow:0 1px 2px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.06);
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --header-h:60px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0d1117; --surface:#161b22; --surface-2:#1e252e; --card:#161b22; --hero:#1a2030; --text:#e8ecf2; --muted:#a3adbb;
+    --border:#2c3541; --link:#8ab4ff;
+    --ok-bg:#12301f; --ok-fg:#8be0a6; --ok-bd:#235a37;
+    --sim-bg:#3a2a0a; --sim-fg:#fcd34d; --sim-bd:#6b4d12;
+    --warn-bg:#3d1816; --warn-fg:#ffaaa3; --warn-bd:#74302b;
+    --info-bg:#14284a; --info-fg:#a5c4ff; --info-bd:#2b4a80;
+    --accent-ink:#8ab4ff; --accent-fill:#2f6fe0; --on-accent:#ffffff; --accent-soft:#2f6fe026;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.35);
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 12px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:400 17px/1.65 var(--font);overflow-wrap:break-word}
+img,svg{max-width:100%;height:auto;display:block}
+a{color:var(--link);text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+code{font:500 .88em var(--mono);background:var(--surface-2);padding:.1em .38em;border-radius:6px;overflow-wrap:anywhere}
+h1,h2,h3{line-height:1.2;margin:0;letter-spacing:-.015em}
+p{margin:0 0 1em}
+:focus-visible{outline:3px solid var(--accent-ink);outline-offset:3px;border-radius:6px}
+.wrap{width:100%;max-width:1080px;margin:0 auto;padding:0 24px}
+.skip{position:absolute;left:12px;top:-60px;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:100;font-weight:600}
+.skip:focus{top:12px}
+
+/* Header */
+.site-header{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--border)}
+.bar{display:flex;align-items:center;gap:20px;min-height:var(--header-h)}
+.brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;color:var(--text);text-decoration:none;white-space:nowrap}
+.brand-dot{width:14px;height:14px;border-radius:5px;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.site-header nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.site-header nav::-webkit-scrollbar{display:none}
+.site-header nav a{color:var(--muted);text-decoration:none;padding:8px 10px;border-radius:8px;font-size:.92rem;font-weight:500;white-space:nowrap}
+.brand{flex-shrink:0;white-space:nowrap}
+@media (min-width:721px){
+  .bar{flex-wrap:wrap;gap:6px 12px}
+  .bar .btn-small{margin-left:auto}
+  .site-header nav{flex:1 1 auto;justify-content:flex-end;flex-wrap:wrap;overflow:visible}
+  .site-header nav a{padding:8px 6px;font-size:.88rem}
+}
+.site-header nav a:hover{color:var(--text);background:var(--surface-2)}
+.btn-small{white-space:nowrap;font-size:.9rem;font-weight:600;text-decoration:none;color:var(--text);border:1px solid var(--border);padding:7px 14px;border-radius:999px}
+.btn-small:hover{background:var(--surface-2)}
+
+/* Hero */
+.hero{padding:72px 0 56px;background:radial-gradient(900px 340px at 85% -10%,var(--accent-soft),transparent 70%),linear-gradient(180deg,var(--hero),var(--bg));border-bottom:1px solid var(--border)}
+.kicker{color:var(--accent-ink);font-weight:700;font-size:.85rem;letter-spacing:.09em;text-transform:uppercase;margin-bottom:14px}
+.hero h1{font-size:clamp(2.4rem,6vw,4rem);font-weight:800}
+.tagline{font-size:clamp(1.25rem,2.6vw,1.7rem);color:var(--muted);margin:12px 0 22px;font-weight:500;line-height:1.35}
+.summary{max-width:760px;font-size:1.08rem}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0 22px}
+.btn{display:inline-block;padding:12px 20px;border-radius:10px;font-weight:650;text-decoration:none;border:1.5px solid var(--border);color:var(--text);line-height:1.2}
+.btn-primary{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost:hover{background:var(--surface-2)}
+.chips{list-style:none;display:flex;flex-wrap:wrap;gap:8px;padding:0;margin:0 0 32px}
+.chip{font-size:.84rem;font-weight:600;padding:5px 12px;border-radius:999px;border:1px solid;line-height:1.35}
+.chip-ok{background:var(--ok-bg);color:var(--ok-fg);border-color:var(--ok-bd)}
+.chip-sim{background:var(--sim-bg);color:var(--sim-fg);border-color:var(--sim-bd)}
+.chip-warn{background:var(--warn-bg);color:var(--warn-fg);border-color:var(--warn-bd)}
+.chip-info{background:var(--info-bg);color:var(--info-fg);border-color:var(--info-bd)}
+.banner{border-radius:20px;box-shadow:var(--shadow);width:100%}
+
+/* Sections */
+.section{padding:72px 0;border-bottom:1px solid var(--border)}
+.section.alt{background:var(--surface)}
+.eyebrow{margin:0 0 8px;font-size:.85rem;font-weight:700;letter-spacing:.1em;color:var(--accent-ink)}
+.section h2{font-size:clamp(1.7rem,3.6vw,2.4rem);font-weight:780;margin-bottom:20px}
+.lede{max-width:780px;font-size:1.06rem}
+.more{margin-top:20px}
+.cards{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:16px}
+.cards-3{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.cards li{background:var(--card);box-shadow:var(--shadow);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;border-top:3px solid var(--accent)}
+.section.alt .cards li{background:var(--card)}
+.cards h3{font-size:1.06rem;margin-bottom:8px}
+.cards p{margin:0;color:var(--muted);font-size:.97rem}
+.related .rel-name{font-weight:700;font-size:1.05rem;display:inline-block;margin-bottom:6px;overflow-wrap:anywhere}
+
+/* How it works */
+.diagram{margin:28px 0;background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius);padding:8px;box-shadow:var(--shadow)}
+.diagram img{border-radius:10px;width:100%}
+.diagram figcaption{color:#475569;font-size:.9rem;padding:10px 12px 6px}
+.stepper{box-shadow:var(--shadow);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.stepper-hint{color:var(--muted);font-size:.85rem;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:.08em}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.tabs button{font:inherit;font-size:.92rem;font-weight:600;display:inline-flex;align-items:center;gap:8px;padding:8px 14px 8px 8px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;text-align:left}
+.tabs button:hover{background:var(--surface-2)}
+.tab-n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--surface-2);font-size:.8rem}
+.tabs button[aria-selected=true]{border-color:var(--accent-ink);background:var(--accent-soft)}
+.tabs button[aria-selected=true] .tab-n{background:var(--accent-fill);color:var(--on-accent)}
+.panel h3{font-size:1.25rem;margin-bottom:10px}
+.panel-n{color:var(--accent-ink);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+.panel p{max-width:760px}
+.panel-note{color:var(--sim-fg);background:var(--sim-bg);border:1px solid var(--sim-bd);border-radius:10px;padding:10px 14px;font-size:.93rem;font-weight:500}
+/* Without JS every stage is listed; with JS only the selected one. */
+html:not(.js) .tabs,html:not(.js) .stepper-hint{display:none}
+html:not(.js) .panel{padding:14px 0;border-top:1px solid var(--border)}
+html.js .panel[hidden]{display:none}
+
+/* Result tables */
+.result{margin:36px 0 0;padding:0}
+.result figcaption{font-size:1.2rem;font-weight:700;margin-bottom:8px}
+.tbl-context{color:var(--muted);max-width:860px;font-size:.97rem}
+.tbl-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:top}
+thead th{background:var(--surface-2);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+tbody th{font-weight:600}
+tbody tr:last-child th,tbody tr:last-child td{border-bottom:0}
+tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface) 70%,transparent)}
+.caveat{margin:0;padding:14px 18px;background:var(--sim-bg);color:var(--sim-fg);border:1px solid var(--sim-bd);border-top:0;border-radius:0 0 var(--radius) var(--radius);font-size:.95rem;font-weight:500}
+.caveat-label{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border:1.5px solid currentColor;border-radius:6px;padding:1px 7px;margin-right:8px}
+.caveat code{background:rgba(0,0,0,.08)}
+.tbl-notes{color:var(--muted);font-size:.95rem;margin-top:14px;max-width:860px}
+.tbl-notes p{margin-bottom:.6em}
+.tbl-source{color:var(--muted);font-size:.85rem;margin:6px 0 0}
+
+/* Architecture */
+.pattern{background:var(--accent-soft);border-left:4px solid var(--accent);padding:14px 18px;border-radius:0 10px 10px 0;font-weight:600;max-width:860px}
+.pattern span{display:block;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:2px}
+.flow{list-style:none;counter-reset:f;margin:28px 0 0;padding:0;display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr))}
+.flow li{box-shadow:var(--shadow);counter-increment:f;position:relative;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px 14px 52px;min-height:72px}
+.flow li::before{content:counter(f);position:absolute;left:14px;top:14px;width:26px;height:26px;border-radius:50%;background:var(--accent-fill);color:var(--on-accent);display:grid;place-items:center;font-weight:700;font-size:.85rem}
+.flow-label{display:block;font-weight:700}
+.flow-detail{display:block;color:var(--muted);font-size:.9rem;line-height:1.45;margin-top:2px}
+.flow + .stepper{margin-top:24px}
+
+/* Not built */
+.section.nb{background:var(--sim-bg);border-top:4px solid var(--sim-bd);border-bottom:4px solid var(--sim-bd)}
+.section.nb .eyebrow{color:var(--sim-fg)}
+.section.nb h2,.section.nb .lede{color:var(--text)}
+.nb-list{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))}
+.nb-list li{background:var(--card);border:1.5px dashed var(--sim-bd);border-radius:var(--radius);padding:18px 20px}
+.nb-list h3{font-size:1.02rem;margin:8px 0}
+.nb-list p{margin:0;color:var(--muted);font-size:.95rem}
+.status{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:2px 9px;border-radius:6px;border:1.5px solid}
+.status-not-built{background:var(--warn-bg);color:var(--warn-fg);border-color:var(--warn-bd)}
+.status-not-verified{background:var(--sim-bg);color:var(--sim-fg);border-color:var(--sim-bd)}
+.status-limit{background:var(--info-bg);color:var(--info-fg);border-color:var(--info-bd)}
+
+/* Roadmap */
+.roadmap{list-style:none;margin:8px 0 0;padding:0;max-width:860px}
+.roadmap li{display:grid;grid-template-columns:28px 76px 1fr;gap:6px 10px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--border)}
+.road-mark{font-weight:800;text-align:center}
+.done .road-mark{color:var(--ok-fg)}
+.todo .road-mark{color:var(--muted)}
+.road-state{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.done .road-state{color:var(--ok-fg)}
+
+/* Footer */
+.site-footer{background:var(--surface);padding:48px 0}
+.foot{display:flex;flex-wrap:wrap;gap:32px 64px;justify-content:space-between}
+.foot-title{font-weight:700;margin-bottom:8px}
+.foot-links{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-wrap:wrap;gap:6px 20px}
+.foot-note{color:var(--muted);font-size:.9rem;max-width:460px}
+.contact{text-align:left}
+.contact-name{font-size:1.25rem;font-weight:750;margin:0}
+.contact-role{color:var(--muted);margin:2px 0 12px}
+.contact-links{list-style:none;padding:0;margin:0;display:flex;gap:10px;flex-wrap:wrap}
+.contact-links a{display:inline-block;padding:8px 16px;border-radius:999px;border:1.5px solid var(--border);color:var(--text);font-weight:600;text-decoration:none;background:var(--card)}
+.contact-links a:hover{border-color:var(--accent-ink)}
+
+/* Hub */
+.hub-grid{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:24px;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr))}
+.hub-card{background:linear-gradient(180deg,var(--wash,var(--card)),var(--card) 55%);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;border-top:4px solid var(--accent)}
+.hub-card img{border-radius:12px;margin-bottom:16px}
+.hub-card h2{font-size:1.6rem;margin:0 0 4px}
+.hub-card h2 a{color:var(--text);text-decoration:none}
+.hub-card h2 a:hover{color:var(--accent-ink);text-decoration:underline}
+.tagline-sm{color:var(--accent-ink);font-weight:650;margin-bottom:10px}
+.hub-card .chips{margin:6px 0 20px}
+.card-links{margin:auto 0 0;display:flex;flex-wrap:wrap;gap:10px}
+
+@media (max-width:720px){
+  body{font-size:16px}
+  .wrap{padding:0 18px}
+  .bar{flex-wrap:wrap;gap:6px 12px;padding-top:8px;padding-bottom:4px}
+  .site-header nav{order:3;width:100%;margin-left:-8px;padding-bottom:4px}
+  .btn-small{margin-left:auto}
+  :root{--header-h:96px}
+  .hero{padding:40px 0 36px}
+  .section{padding:48px 0}
+  .stepper{padding:14px}
+  .roadmap li{grid-template-columns:24px 1fr;}
+  .road-state{grid-column:2}
+  .road-text{grid-column:2}
+  th,td{padding:10px 12px}
+  .tbl-scroll.wide table{min-width:560px}
+  .diagram-scroll{overflow-x:auto}
+  .diagram-scroll img{min-width:760px}
+  .scroll-hint{display:block}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important;animation:none!important}
+}
+@media print{.site-header,.skip{display:none}body,.hero,.section,.section.alt,.site-footer{background:#fff!important}}
+thead code{text-transform:none;background:none;padding:0;letter-spacing:0}
+.diagram-scroll{border-radius:10px}
+.scroll-hint{display:none;color:var(--muted);font-size:.85rem;margin:-14px 0 20px}
+.hero h1+.summary{margin-top:20px}
+:root{--bg:#f3fbfd;--surface:#ebf7fc;--surface-2:#e0f3fa;--card:#fdfeff;--hero:#e4f5fb;--border:#bad1df;--accent:#5fc4e8;--accent-ink:#157294;--accent-fill:#157294;--on-accent:#ffffff;--accent-soft:#d8f1f9;}@media (prefers-color-scheme:dark){:root{--bg:#111d25;--surface:#14232d;--surface-2:#172b36;--card:#1a2630;--hero:#172d38;--border:#314858;--accent:#5fc4e8;--accent-ink:#5fc4e8;--accent-fill:#5fc4e8;--on-accent:#0b0f14;--accent-soft:#193340;}}</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a><header class="site-header"><div class="wrap bar"><a class="brand" href="https://plainjane20.github.io/projects/"><span class="brand-dot" aria-hidden="true"></span>muster</a><nav aria-label="Sections"><a href="#problem">Problem</a><a href="#how">How it works</a><a href="#measured">Measured</a><a href="#architecture">Architecture</a><a href="#competencies">Competencies</a><a href="#not-built">Not built</a><a href="#roadmap">Roadmap</a></nav><a class="btn-small" href="https://github.com/PlainJane20/muster" rel="noopener noreferrer" target="_blank">GitHub repo</a></div></header><main id="main"><section class="hero" aria-labelledby="hero-h"><div class="wrap"><p class="kicker">Portfolio project: a launcher and bookkeeper for AI coding agents</p><h1 id="hero-h">muster</h1><p class="tagline">A git-native AI team you run locally</p><p class="summary">Hire an agent (one markdown file), file a ticket, dispatch it to a real runtime. muster is a single front door to a shelf of AI coding and writing tools, with git worktree isolation and a durable record of every attempt. It is a launcher and bookkeeper, not an orchestrator or an agent: it calls no model, and it cannot judge whether a runtime&#x27;s work was right.</p><p class="cta"><a class="btn btn-primary" href="#measured">See what is measured</a><a class="btn btn-ghost" href="https://github.com/PlainJane20/muster" rel="noopener noreferrer" target="_blank">View the repo</a><a class="btn btn-ghost" href="#not-built">What is not built</a></p><ul class="chips" aria-label="Status"><li class="chip chip-ok">51 tests passing offline (counted locally)</li><li class="chip chip-ok">Latest CI run passed (checked)</li><li class="chip chip-info">6 runtimes verified live, 2 documented only</li><li class="chip chip-warn">Risk tiers are advisory</li><li class="chip chip-warn">Success check proves a change exists, not that it is right</li><li class="chip chip-warn">No production mileage</li></ul><img class="banner" src="assets/banner.svg" alt="muster banner: a git-native AI team you run locally" width="1200" height="320"></div></section><section id="problem" class="section " aria-labelledby="problem-h"><div class="wrap"><p class="eyebrow"><span>01</span></p><h2 id="problem-h">The problem</h2><p class="lede">Most &quot;AI agent platform&quot; projects either claim to support a long list of tools without anyone having actually run half of them, or hide how thin that list really is behind a database and a UI.</p><p class="lede">muster labels every runtime verified or documented based on whether it was actually installed and dispatched against for real, and the whole thing is a handful of Python files and markdown, with no server and no database.</p><ul class="cards cards-3"><li><h3>A tool can report success without a change</h3><p>A live Aider dispatch printed &quot;Applied edit to README.md&quot; and exited 0, but <code>git log</code> in the worktree showed no new commit. <code>succeeded</code> means the tool didn&#x27;t error, not that the change happened.</p></li><li><h3>A verified adapter must work under real auth</h3><p>Claude Code&#x27;s <code>--bare</code> mode looked like the obvious default but fails outright where managed settings pin OAuth login, so the adapter omits it.</p></li><li><h3>Documentation can be second-hand</h3><p>Gemini CLI&#x27;s original adapter was built from a summary of the docs that missed real flags. Installing the real CLI and reading its <code>--help</code> caught it.</p></li></ul></div></section><section id="how" class="section alt" aria-labelledby="how-h"><div class="wrap"><p class="eyebrow"><span>02</span></p><h2 id="how-h">How it works</h2><p class="lede">You assign a ticket to an agent by hand. Dispatch prints what it would do unless you pass <code>--run</code>. A real run happens in its own git worktree where possible, and every dispatch is stored as a durable attempt.</p><ol class="flow"><li><span class="flow-label">Hire</span><span class="flow-detail">one markdown file: which tool, what it is for, and a <code>tool_access</code> dial of <code>read_only</code>, <code>standard</code> or <code>full</code></span></li><li><span class="flow-label">File a ticket</span><span class="flow-detail">title, tags and a description</span></li><li><span class="flow-label">Assign</span><span class="flow-detail">manually; this tool does not guess who should do it</span></li><li><span class="flow-label">Dispatch</span><span class="flow-detail">prints by default; <code>--run</code> does it for real, in a fresh git worktree when the <code>cwd</code> is a git repo</span></li><li><span class="flow-label">Attempt record</span><span class="flow-detail">PID, status and result; <code>filesystem_verified</code> cross-checks git for standard and full dispatches</span></li><li><span class="flow-label">Close</span><span class="flow-detail"><code>close --summary</code> appends to <code>ledger.md</code></span></li></ol><div class="stepper" data-stepper><p class="stepper-hint">Stages, one at a time</p><div class="tabs" role="tablist" aria-label="Stages"><button type="button" role="tab" id="tab-0" aria-controls="panel-0" aria-selected="true" tabindex="0"><span class="tab-n">1</span><span class="tab-t">Hire and file</span></button><button type="button" role="tab" id="tab-1" aria-controls="panel-1" aria-selected="false" tabindex="-1"><span class="tab-n">2</span><span class="tab-t">Assign and dispatch</span></button><button type="button" role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false" tabindex="-1"><span class="tab-n">3</span><span class="tab-t">Worktree and attempt</span></button><button type="button" role="tab" id="tab-3" aria-controls="panel-3" aria-selected="false" tabindex="-1"><span class="tab-n">4</span><span class="tab-t">Check, then trust nothing</span></button></div><div class="panels"><div role="tabpanel" id="panel-0" aria-labelledby="tab-0" class="panel"><h3><span class="panel-n">Stage 1</span> Hire and file</h3><p>An agent is a markdown file naming its tool and how much access it gets. Muster translates the access dial into each tool&#x27;s own flags, but only passes them; the tool enforces them.</p><p class="panel-note">The dial does nothing for Ollama and LM Studio, and Codex <code>standard</code> and <code>full</code> have not been exercised live.</p></div><div role="tabpanel" id="panel-1" aria-labelledby="tab-1" class="panel" data-later><h3><span class="panel-n">Stage 2</span> Assign and dispatch</h3><p>Assignment is manual on purpose (see switchboard for the automatic-routing version of the idea). Dispatch prints what would happen by default; <code>--run</code> launches the runtime.</p><p class="panel-note">Medium and high risk agents print a <code>WARNING</code> on <code>--run</code> but are not blocked.</p></div><div role="tabpanel" id="panel-2" aria-labelledby="tab-2" class="panel" data-later><h3><span class="panel-n">Stage 3</span> Worktree and attempt</h3><p>If the agent&#x27;s <code>cwd</code> is a git repo, dispatch runs in its own worktree, created fresh and left in place so you can review it. Every dispatch is a durable attempt, and a running one can be paused, resumed or killed with real OS signals against its recorded PID.</p></div><div role="tabpanel" id="panel-3" aria-labelledby="tab-3" class="panel" data-later><h3><span class="panel-n">Stage 4</span> Check, then trust nothing</h3><p><code>filesystem_verified</code> catches a tool claiming success when no git change exists, for example the captured Aider run that reported success with no commit.</p><p class="panel-note">It only proves a git diff or commit exists in the worktree, not that the change is correct or what was asked for.</p></div></div></div></div></section><section id="measured" class="section " aria-labelledby="measured-h"><div class="wrap"><p class="eyebrow"><span>03</span></p><h2 id="measured-h">What is measured</h2><p class="lede">No performance numbers. What is measured is how far each runtime was actually verified, which is the point of the project.</p><figure class="result" aria-labelledby="tbl-0-cap"><figcaption id="tbl-0-cap">Runtime verification status</figcaption><p class="tbl-context">Eight runtimes are registered. Each is labeled verified or documented depending on whether it was installed and dispatched against for real.</p><div class="tbl-scroll wide" role="region" aria-labelledby="tbl-0-cap" tabindex="0"><table><thead><tr><th scope="col">Runtime</th><th scope="col">Status</th><th scope="col">What was actually checked</th></tr></thead><tbody><tr><th scope="row">Claude Code</th><td>Verified</td><td>Flags checked against <code>claude --help</code>; JSON shape from one real <code>claude -p</code> call; a full dispatch proven end to end</td></tr><tr><th scope="row">Codex</th><td>Verified</td><td>Flags checked against <code>codex exec --help</code>; a real invocation (<code>-s read-only -o &lt;file&gt;</code>, exit 0, correct output). Codex <code>standard</code> and <code>full</code> not exercised live</td></tr><tr><th scope="row">Ollama</th><td>Verified</td><td>Installed via Homebrew, pulled a real model, called the running server through this adapter</td></tr><tr><th scope="row">Aider</th><td>Verified, with a caveat</td><td>A live edit dispatch showed that &quot;Applied edit&quot; plus exit 0 does not guarantee a persisted change</td></tr><tr><th scope="row">OpenCode</th><td>Verified</td><td>Installed and run against the local Ollama server after fixing a parser that guessed the wrong field; its docs describe the JSON output only as raw events, so that parser is best-effort</td></tr><tr><th scope="row">Gemini CLI</th><td>Verified</td><td>A real <code>GEMINI_API_KEY</code> and a real dispatch through the full pipeline; <code>--skip-trust</code> is required unconditionally</td></tr><tr><th scope="row">Cursor</th><td>Documented, flags confirmed live</td><td>Flags checked against the real <code>--help</code>; a full dispatch needs a paid <code>CURSOR_API_KEY</code>, a deliberate cost-based stopping point</td></tr><tr><th scope="row">LM Studio</th><td>Documented only</td><td>Installed, but it is GUI-first and this environment had no window-server session, so its CLI never bootstrapped</td></tr></tbody></table></div><p class="caveat"><span class="caveat-label">Caveat</span> Verified means installed and dispatched against for real during development, not benchmarked or load tested. The README itself describes the project as built this week with 51 tests and no production mileage.</p><p class="tbl-source">Source: README &quot;What verified actually means here&quot;</p></figure><figure class="result" aria-labelledby="tbl-1-cap"><figcaption id="tbl-1-cap">Project scale</figcaption><p class="tbl-context">From the README header and repository.</p><div class="tbl-scroll" role="region" aria-labelledby="tbl-1-cap" tabindex="0"><table><thead><tr><th scope="col">Item</th><th scope="col">Value</th></tr></thead><tbody><tr><th scope="row">Registered example agents</th><td>12 across 8 runtimes</td></tr><tr><th scope="row">Tests</th><td>51, offline (real git worktrees, mocked runtime calls)</td></tr><tr><th scope="row">Python versions tested</th><td>3.9 and 3.14</td></tr></tbody></table></div><p class="caveat"><span class="caveat-label">Caveat</span> Counts of things that exist, not measures of quality. <code>risk_tier</code> is advisory and <code>filesystem_verified</code> only proves a change exists.</p><p class="tbl-source">Source: README header and &quot;Setup&quot;; <code>agents/</code>, <code>tests/</code></p></figure></div></section><section id="architecture" class="section alt" aria-labelledby="architecture-h"><div class="wrap"><p class="eyebrow"><span>04</span></p><h2 id="architecture-h">Architecture pattern</h2><p class="pattern"><span>Pattern</span> Manual dispatcher: a launcher with no routing. <code>muster/dispatch.py</code> takes a ticket and an agent you assigned by hand, builds the prompt, and launches that agent&#x27;s runtime (<code>muster/runtimes/</code>), usually in a fresh git worktree (<code>muster/worktree.py</code>). It records the outcome as an attempt (<code>muster/attempts.py</code>) and can pause or kill the process (<code>muster/control.py</code>). Nothing chooses the agent; assignment is deliberately manual.</p><p class="lede">Muster itself is entirely deterministic and calls no model; the model-driven work happens inside the external tool it launches. <code>dispatch</code> only prints what it would do unless <code>--run</code> is given. It does no planning, decomposition or multi-agent coordination.</p><ol class="flow"><li><span class="flow-label">Hire and file a ticket</span><span class="flow-detail"><code>agents/*.md</code> and a ticket file</span></li><li><span class="flow-label">Assign</span><span class="flow-detail">manual</span></li><li><span class="flow-label">Dispatch</span><span class="flow-detail">prints by default; <code>--run</code> executes</span></li><li><span class="flow-label">Git worktree</span><span class="flow-detail">isolated when the <code>cwd</code> is a git repo and <code>use_worktree</code> is on; otherwise the shared <code>cwd</code></span></li><li><span class="flow-label">Runtime</span><span class="flow-detail">6 verified: Claude Code, Codex, Ollama, Aider, OpenCode, Gemini CLI; 2 documented: Cursor, LM Studio</span></li><li><span class="flow-label">DispatchAttempt</span><span class="flow-detail">pid, status and result</span></li><li><span class="flow-label"><code>ledger.md</code></span><span class="flow-detail"><code>close --summary</code></span></li></ol><p class="more"><a href="https://github.com/PlainJane20/muster/blob/main/ARCHITECTURE.md" rel="noopener noreferrer" target="_blank">Design rationale in the repo</a></p></div></section><section id="competencies" class="section " aria-labelledby="competencies-h"><div class="wrap"><p class="eyebrow"><span>05</span></p><h2 id="competencies-h">Competencies demonstrated</h2><ul class="cards cards-3"><li><h3>Verification discipline</h3><p>Every runtime is labeled verified or documented, disclosed in the agent registry, <code>muster doctor</code> and the README.</p></li><li><h3>Isolation by default</h3><p>Real <code>git worktree</code> commands, tested against a real repo; worktrees are left in place for review.</p></li><li><h3>Honest success reporting</h3><p><code>filesystem_verified</code> cross-checks git against a reported success, with its limits stated.</p></li><li><h3>Process control</h3><p><code>pause</code>, <code>resume</code> and <code>kill</code> use real SIGSTOP, SIGCONT, SIGTERM and SIGKILL against the recorded PID, with no daemon.</p></li><li><h3>Beginner onboarding</h3><p><code>muster onboard</code>, <code>doctor</code> and an interactive <code>agent-hire</code>.</p></li></ul></div></section><section id="not-built" class="section nb" aria-labelledby="not-built-h"><div class="wrap"><p class="eyebrow"><span>06</span></p><h2 id="not-built-h">What is not built or not verified yet</h2><p class="lede">Taken from the repository&#x27;s own README and its known limits. This is part of the pitch: the gaps are known, written down and not rounded away.</p><ul class="nb-list"><li><span class="status status-limit">limit</span><h3>Risk tiers only warn</h3><p><code>risk_tier</code> prints a <code>WARNING</code> on <code>--run</code> for medium and high risk agents and never blocks a dispatch.</p></li><li><span class="status status-limit">limit</span><h3>The success check proves a change exists</h3><p><code>filesystem_verified</code> only proves a git diff or commit exists in the worktree, not that the change is correct. A follow-up Aider dispatch committed a file literally named after the requested text.</p></li><li><span class="status status-limit">limit</span><h3>The access dial is passed, not enforced</h3><p>Muster only passes the flags and the tool enforces them. The dial does nothing for Ollama and LM Studio.</p></li><li><span class="status status-not-verified">not verified</span><h3>Codex standard and full access</h3><p>Not exercised live.</p></li><li><span class="status status-not-verified">not verified</span><h3>Cursor and LM Studio dispatch</h3><p>Cursor is documented with flags confirmed live but lacks an authenticated dispatch (paid key, deliberately not pursued). LM Studio needs a real interactive desktop session and was never verified.</p></li><li><span class="status status-limit">limit</span><h3>Launcher, not orchestrator</h3><p>It does no planning, decomposition or multi-agent coordination, and cannot judge whether a runtime&#x27;s work was right.</p></li><li><span class="status status-not-built">not built</span><h3>Automatic routing</h3><p>Assignment is manual on purpose; switchboard is the automatic-routing version of the idea.</p></li><li><span class="status status-not-built">not built</span><h3>Scheduling, Talk, Walkie-Talkie, Telegram</h3><p>Real ideas, not built in this version. Livery has them.</p></li><li><span class="status status-limit">limit</span><h3>No production mileage</h3><p>Built this week, 51 tests, per the README&#x27;s own comparison with Livery.</p></li></ul></div></section><section id="roadmap" class="section alt" aria-labelledby="roadmap-h"><div class="wrap"><p class="eyebrow"><span>07</span></p><h2 id="roadmap-h">Roadmap</h2><ul class="roadmap"><li class="done"><span class="road-mark" aria-hidden="true">&#10003;</span><span class="road-state">Done</span><span class="road-text">Six verified live runtimes; two documented with real install and CLI attempts</span></li><li class="done"><span class="road-mark" aria-hidden="true">&#10003;</span><span class="road-state">Done</span><span class="road-text">Real git worktree isolation, tested against a real repo</span></li><li class="done"><span class="road-mark" aria-hidden="true">&#10003;</span><span class="road-state">Done</span><span class="road-text">Generalized memory (decisions, lessons, preferences) and beginner onboarding</span></li><li class="done"><span class="road-mark" aria-hidden="true">&#10003;</span><span class="road-state">Done</span><span class="road-text">Filesystem verification of dispatch success, and real pause, resume and kill</span></li><li class="todo"><span class="road-mark" aria-hidden="true">&#9675;</span><span class="road-state">Not done</span><span class="road-text">Automatic routing (see switchboard)</span></li><li class="todo"><span class="road-mark" aria-hidden="true">&#9675;</span><span class="road-state">Not done</span><span class="road-text">Scheduling, Talk mode, Walkie-Talkie debate, Telegram-style notifications</span></li><li class="todo"><span class="road-mark" aria-hidden="true">&#9675;</span><span class="road-state">Not done</span><span class="road-text">Get LM Studio to verified; needs a machine with an interactive desktop session</span></li></ul></div></section><section id="related" class="section " aria-labelledby="related-h"><div class="wrap"><p class="eyebrow"><span>08</span></p><h2 id="related-h">Related projects</h2><ul class="cards cards-3 related"><li><a class="rel-name" href="https://github.com/PlainJane20/switchboard" rel="noopener noreferrer" target="_blank">switchboard</a><p>Adds automatic ticket-to-agent routing; muster assigns manually, on purpose.</p></li><li><a class="rel-name" href="https://github.com/PlainJane20/taskloom" rel="noopener noreferrer" target="_blank">taskloom</a><p>Takes the visual desktop-app angle instead of a headless CLI.</p></li></ul></div></section></main><footer class="site-footer"><div class="wrap foot"><div><p class="foot-title">muster</p><ul class="foot-links"><li><a href="https://github.com/PlainJane20/muster" rel="noopener noreferrer" target="_blank">Repository</a></li><li><a href="https://github.com/PlainJane20/muster/blob/main/ARCHITECTURE.md" rel="noopener noreferrer" target="_blank">Architecture</a></li><li><a href="https://github.com/PlainJane20/muster/blob/main/ledger.md" rel="noopener noreferrer" target="_blank">Ledger</a></li><li>MIT license</li><li><a href="https://plainjane20.github.io/projects/">All projects</a></li></ul><p class="foot-note">Static page, no scripts beyond one small inline file, no trackers, no external requests.</p></div><div class="contact" id="contact"><p class="contact-name">Navi Sohi</p><p class="contact-role">Technical Program Manager &amp; Automation Engineer</p><ul class="contact-links"><li><a href="https://www.linkedin.com/in/navisohi/" rel="noopener noreferrer" target="_blank">LinkedIn</a></li><li><a href="https://github.com/PlainJane20" rel="noopener noreferrer" target="_blank">GitHub</a></li><li><a href="mailto:nks.ai.dev@gmail.com">Email</a></li></ul></div></div></footer>
+<script>/* Progressive enhancement: turns the stage list into an accessible tab set. */
+(function () {
+  var root = document.documentElement;
+  root.classList.add("js");
+  document.querySelectorAll("[data-stepper]").forEach(function (box) {
+    var tabs = Array.prototype.slice.call(box.querySelectorAll('[role="tab"]'));
+    var panels = Array.prototype.slice.call(box.querySelectorAll('[role="tabpanel"]'));
+    function select(i, focus) {
+      tabs.forEach(function (t, j) {
+        t.setAttribute("aria-selected", j === i ? "true" : "false");
+        t.tabIndex = j === i ? 0 : -1;
+      });
+      panels.forEach(function (p, j) { p.hidden = j !== i; });
+      if (focus) tabs[i].focus();
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener("click", function () { select(i, false); });
+      t.addEventListener("keydown", function (e) {
+        var n = tabs.length, k = null;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") k = (i + 1) % n;
+        else if (e.key === "ArrowLeft" || e.key === "ArrowUp") k = (i + n - 1) % n;
+        else if (e.key === "Home") k = 0;
+        else if (e.key === "End") k = n - 1;
+        if (k !== null) { e.preventDefault(); select(k, true); }
+      });
+    });
+    select(0, false);
+  });
+})();
+</script>
+</body>
+</html>
